@@ -1,35 +1,6 @@
-import collections
-
-class memoized(object):
-    '''Decorator. Caches a function's return value each time it is called.
-    If called later with the same arguments, the cached value is returned
-    (not reevaluated).
-    '''
-
-    def __init__(self, func):
-        self.func = func
-        self.cache = {}
-
-    def __call__(self, *args, **kwargs):
-        key = args + tuple(sorted(kwargs.items()))
-        if not isinstance(key, collections.Hashable):
-            # uncacheable. a list, for instance.
-            # better to not cache than blow up.
-            return self.func(*args, **kwargs)
-        if key in self.cache:
-            return self.cache[key]
-        else:
-            value = self.func(*args, **kwargs)
-            self.cache[key] = value
-            return value
-
-    def __repr__(self):
-        '''Return the function's docstring.'''
-        return self.func.__doc__
-
-    def __get__(self, obj, objtype):
-        '''Support instance methods.'''
-        return functools.partial(self.__call__, obj)
+from builtins import map, next, chr, range, object
+from binascii import hexlify, unhexlify
+from .util import memoized
 
 
 class EVMAsm(object):
@@ -38,7 +9,7 @@ class EVMAsm(object):
 
         Example use::
 
-            >>> from manticore.platforms.evm import EVMAsm
+            >>> from evmasm import EVMAsm
             >>> EVMAsm.disassemble_one('\\x60\\x10')
             Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
             >>> EVMAsm.assemble_one('PUSH1 0x10')
@@ -221,7 +192,7 @@ class EVMAsm(object):
             ''' Encoded instruction '''
             bytes = []
             bytes.append(chr(self._opcode))
-            for offset in reversed(xrange(self.operand_size)):
+            for offset in reversed(range(self.operand_size)):
                 c = (self.operand >> offset * 8) & 0xff
                 bytes.append(chr(c))
             return ''.join(bytes)
@@ -470,7 +441,7 @@ class EVMAsm(object):
     def _get_reverse_table():
         ''' Build an internal table used in the assembler '''
         reverse_table = {}
-        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in EVMAsm._table.items():
+        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in list(EVMAsm._table.items()):
             mnemonic = name
             if name == 'PUSH':
                 mnemonic = '%s%d' % (name, (opcode & 0x1f) + 1)
@@ -485,7 +456,7 @@ class EVMAsm(object):
         ''' Assemble one EVM instruction from its textual representation.
 
             :param assembler: assembler code for one instruction
-            :param pc: program counter of the instruction (optional)
+            :param pc: program counter of the instruction(optional)
             :return: An Instruction object
 
             Example use::
@@ -506,9 +477,7 @@ class EVMAsm(object):
                 operand = None
 
             return EVMAsm.Instruction(opcode, name, operand_size, pops, pushes, gas, description, operand=operand, pc=pc)
-        except Exception as e:
-            print "Exception", repr(e)
-
+        except BaseException:
             raise Exception("Something wrong at pc %d" % pc)
 
     @staticmethod
@@ -516,7 +485,7 @@ class EVMAsm(object):
         ''' Assemble a sequence of textual representation of EVM instructions
 
             :param assembler: assembler code for any number of instructions
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :return: An generator of Instruction objects
 
             Example use::
@@ -550,7 +519,7 @@ class EVMAsm(object):
 
             :param bytecode: the bytecode stream
             :type bytecode: bytearray or str
-            :param pc: program counter of the instruction (optional)
+            :param pc: program counter of the instruction(optional)
             :type bytecode: iterator/sequence/str
             :return: an Instruction object
 
@@ -559,11 +528,11 @@ class EVMAsm(object):
                 >>> print EVMAsm.disassemble_one('\x60\x10')
 
         '''
-        if isinstance(bytecode, str):
-            bytecode = bytearray(bytecode)
+        if isinstance(bytecode, (str, bytes)):
+            bytecode = bytearray(bytecode.encode())
         bytecode = iter(bytecode)
         opcode = next(bytecode)
-        assert isinstance(opcode, (int, long))
+        assert isinstance(opcode, int)
 
         invalid = ('INVALID', 0, 0, 0, 0, 'Unknown opcode')
         name, operand_size, pops, pushes, gas, description = EVMAsm._table.get(opcode, invalid)
@@ -578,7 +547,7 @@ class EVMAsm(object):
         ''' Decode all instructions in bytecode
 
             :param bytecode: an evm bytecode (binary)
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :type bytecode: iterator/sequence/str
             :return: An generator of Instruction objects
 
@@ -603,7 +572,7 @@ class EVMAsm(object):
         '''
 
         if isinstance(bytecode, str):
-            bytecode = bytearray(bytecode)
+            bytecode = bytearray(bytecode.encode())
         bytecode = iter(bytecode)
         while True:
             instr = EVMAsm.disassemble_one(bytecode, pc=pc)
@@ -615,7 +584,7 @@ class EVMAsm(object):
         ''' Disassemble an EVM bytecode
 
             :param bytecode: binary representation of an evm bytecode (hexadecimal)
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :type bytecode: str
             :return: the text representation of the aseembler code
 
@@ -637,7 +606,7 @@ class EVMAsm(object):
         ''' Assemble an EVM program
 
             :param asmcode: an evm assembler program
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :type asmcode: str
             :return: the hex representation of the bytecode
 
@@ -653,14 +622,14 @@ class EVMAsm(object):
                 ...
                 "\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
         '''
-        return ''.join(map(lambda x: x.bytes, EVMAsm.assemble_all(asmcode, pc=pc)))
+        return ''.join([x.bytes for x in EVMAsm.assemble_all(asmcode, pc=pc)])
 
     @staticmethod
     def disassemble_hex(bytecode, pc=0):
         ''' Disassemble an EVM bytecode
 
             :param bytecode: canonical representation of an evm bytecode (hexadecimal)
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :type bytecode: str
             :return: the text representation of the aseembler code
 
@@ -677,7 +646,7 @@ class EVMAsm(object):
         '''
         if bytecode.startswith('0x'):
             bytecode = bytecode[2:]
-        bytecode = bytecode.decode('hex')
+        bytecode = unhexlify(bytecode.encode())
         return EVMAsm.disassemble(bytecode, pc=pc)
 
     @staticmethod
@@ -685,7 +654,7 @@ class EVMAsm(object):
         ''' Assemble an EVM program
 
             :param asmcode: an evm assembler program
-            :param pc: program counter of the first instruction (optional)
+            :param pc: program counter of the first instruction(optional)
             :type asmcode: str
             :return: the hex representation of the bytecode
 
@@ -701,4 +670,4 @@ class EVMAsm(object):
                 ...
                 "0x6060604052600261010"
         '''
-        return '0x' + EVMAsm.assemble(asmcode, pc=pc).encode('hex')
+        return '0x' + hexlify(EVMAsm.assemble(asmcode, pc=pc).encode()).decode()
