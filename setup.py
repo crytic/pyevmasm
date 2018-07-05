@@ -10,7 +10,7 @@ setup(
     url='https://github.com/trailofbits/pyevmasm',
     license='Apache License 2.0',
     packages=['pyevmasm'],
-    python_requires='>2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
+    python_requires='>2.7',
     install_requires=[
         'future'
         ],
