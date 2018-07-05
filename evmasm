@@ -11,8 +11,19 @@ def main():
     parser.add_argument('-d', '--disassemble', action='store_true', help='Disassemble EVM to opcodes')
     parser.add_argument('-i', '--input', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='Input file, default=stdin')
     parser.add_argument('-o', '--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout, help='Output file, default=stdout')
+    parser.add_argument('-t', '--print-opcode-table', action='store_true', help='List supported EVM opcodes')
 
     args = parser.parse_args(sys.argv[1:])
+
+    if args.print_opcode_table:
+        table = EVMAsm._get_reverse_table()
+        for mnemonic in table.keys():
+            # This relies on the internal format 
+            (opcode, name, immediate_operand_size, pops, pushes, gas, description) =  table[mnemonic]
+            print("%02x: %-16s %s" % (opcode, mnemonic, description))
+
+        sys.exit(0)
+
     if args.assemble and args.disassemble:
         print("You cannot both assemble and disassemble at the same time.")
         sys.exit(1)
@@ -23,9 +34,6 @@ def main():
     if args.assemble:
         asm = args.input.read().strip().rstrip()
         args.output.write(EVMAsm.assemble_hex(asm) + "\n")
-        #insns = list(EVMAsm.assemble_all(asm))
-        #for i in insns:
-        #    args.output.write(i)
 
     if args.disassemble:
         buf = args.input.read().strip().rstrip()
