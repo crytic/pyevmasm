@@ -32,6 +32,7 @@ class EVMAsm(object):
             >>> EVMAsm.disassemble_hex('0x606040526002610100')
             'PUSH1 0x60\\nBLOCKHASH\\nMSTORE\\nPUSH1 0x2\\nPUSH2 0x100'
     '''
+
     class Instruction(object):
         def __init__(self, opcode, name, operand_size, pops, pushes, fee, description, operand=None, pc=0):
             '''
@@ -89,19 +90,20 @@ class EVMAsm(object):
 
         def __eq__(self, other):
             ''' Instructions are equal if all features match '''
-            return self._opcode == other._opcode and\
-                self._name == other._name and\
-                self._operand == other._operand and\
-                self._operand_size == other._operand_size and\
-                self._pops == other._pops and\
-                self._pushes == other._pushes and\
-                self._fee == other._fee and\
-                self._pc == other._pc and\
-                self._description == other._description
+            return self._opcode == other._opcode and \
+                   self._name == other._name and \
+                   self._operand == other._operand and \
+                   self._operand_size == other._operand_size and \
+                   self._pops == other._pops and \
+                   self._pushes == other._pushes and \
+                   self._fee == other._fee and \
+                   self._pc == other._pc and \
+                   self._description == other._description
 
         def __repr__(self):
-            output = 'Instruction(0x%x, %r, %d, %d, %d, %d, %r, %r, %r)' % (self._opcode, self._name, self._operand_size,
-                                                                            self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
+            output = 'Instruction(0x%x, %r, %d, %d, %d, %d, %r, %r, %r)' % (
+            self._opcode, self._name, self._operand_size,
+            self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
             return output
 
         def __str__(self):
@@ -294,7 +296,8 @@ class EVMAsm(object):
         @property
         def is_arithmetic(self):
             ''' True if the instruction is an arithmetic operation '''
-            return self.semantics in ('ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
+            return self.semantics in (
+            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
 
     # from http://gavwood.com/paper.pdf
     _table = {  # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
@@ -327,7 +330,8 @@ class EVMAsm(object):
         0x31: ('BALANCE', 0, 1, 1, 20, 'Get balance of the given account.'),
         0x32: ('ORIGIN', 0, 0, 1, 2, 'Get execution origination address.'),
         0x33: ('CALLER', 0, 0, 1, 2, 'Get caller address.'),
-        0x34: ('CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
+        0x34: (
+        'CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
         0x35: ('CALLDATALOAD', 0, 1, 1, 3, 'Get input data of current environment.'),
         0x36: ('CALLDATASIZE', 0, 0, 1, 2, 'Get size of input data in current environment.'),
         0x37: ('CALLDATACOPY', 0, 3, 0, 3, 'Copy input data in current environment to memory.'),
@@ -336,7 +340,8 @@ class EVMAsm(object):
         0x3a: ('GASPRICE', 0, 0, 1, 2, 'Get price of gas in current environment.'),
         0x3b: ('EXTCODESIZE', 0, 1, 1, 20, "Get size of an account's code."),
         0x3c: ('EXTCODECOPY', 0, 4, 0, 20, "Copy an account's code to memory."),
-        0x3d: ('RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment'),
+        0x3d: (
+        'RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment'),
         0x3e: ('RETURNDATACOPY', 0, 3, 0, 3, 'Copy output data from the previous call to memory'),
         0x40: ('BLOCKHASH', 0, 1, 1, 20, 'Get the hash of one of the 256 most recent complete blocks.'),
         0x41: ('COINBASE', 0, 0, 1, 2, "Get the block's beneficiary address."),
@@ -354,7 +359,8 @@ class EVMAsm(object):
         0x57: ('JUMPI', 0, 2, 0, 10, 'Conditionally alter the program counter.'),
         0x58: ('GETPC', 0, 0, 1, 2, 'Get the value of the program counter prior to the increment.'),
         0x59: ('MSIZE', 0, 0, 1, 2, 'Get the size of active memory in bytes.'),
-        0x5a: ('GAS', 0, 0, 1, 2, 'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
+        0x5a: ('GAS', 0, 0, 1, 2,
+               'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
         0x5b: ('JUMPDEST', 0, 0, 0, 1, 'Mark a valid destination for jumps.'),
         0x60: ('PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.'),
         0x61: ('PUSH', 2, 0, 1, 0, 'Place 2-byte item on stack.'),
@@ -429,9 +435,11 @@ class EVMAsm(object):
         0xf1: ('CALL', 0, 7, 1, 40, 'Message-call into an account.'),
         0xf2: ('CALLCODE', 0, 7, 1, 40, "Message-call into this account with alternative account's code."),
         0xf3: ('RETURN', 0, 2, 0, 0, 'Halt execution returning output data.'),
-        0xf4: ('DELEGATECALL', 0, 6, 1, 40, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
+        0xf4: ('DELEGATECALL', 0, 6, 1, 40,
+               "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
         0xfa: ('STATICCALL', 0, 6, 1, 40, 'Static message-call into an account.'),
-        0xfd: ('REVERT', 0, 2, 0, 0, 'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
+        0xfd: ('REVERT', 0, 2, 0, 0,
+               'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
         0xfe: ('INVALID', 0, 0, 0, 0, 'Designated invalid instruction.'),
         0xff: ('SELFDESTRUCT', 0, 1, 0, 5000, 'Halt execution and register account for later deletion.')
     }
@@ -476,7 +484,8 @@ class EVMAsm(object):
                 assert len(assembler) == 1
                 operand = None
 
-            return EVMAsm.Instruction(opcode, name, operand_size, pops, pushes, gas, description, operand=operand, pc=pc)
+            return EVMAsm.Instruction(opcode, name, operand_size, pops, pushes, gas, description, operand=operand,
+                                      pc=pc)
         except BaseException:
             raise Exception("Something wrong at pc %d" % pc)
 
