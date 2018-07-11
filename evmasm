@@ -52,7 +52,7 @@ def main():
         
         insns = list(EVMAsm.disassemble_all(buf))
         for i in insns:
-            args.output.write(str(i) + "\n")
+            args.output.write("%08x: %s\n" %(i.pc, str(i)))
 
 if __name__ == "__main__":
     main()
