@@ -4,12 +4,11 @@ from .util import memoized
 
 
 class EVMAsm(object):
-    '''
+    """
         EVM Instruction factory
 
         Example use::
-
-            >>> from evmasm import EVMAsm
+            >>> from pyevmasm import EVMAsm
             >>> EVMAsm.disassemble_one('\\x60\\x10')
             Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
             >>> EVMAsm.assemble_one('PUSH1 0x10')
@@ -20,22 +19,20 @@ class EVMAsm(object):
             >>> tuple(EVMAsm.assemble_all('ADDRESS\\nBALANCE'))
             (Instruction(0x30, 'ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.', None, 0),
              Instruction(0x31, 'BALANCE', 0, 1, 1, 20, 'Get balance of the given account.', None, 1))
-            >>> EVMAsm.assemble_hex(
-            ...                         """PUSH1 0x60
-            ...                            BLOCKHASH
-            ...                            MSTORE
-            ...                            PUSH1 0x2
-            ...                            PUSH2 0x100
-            ...                         """
-            ...                      )
+            >>> EVMAsm.assemble_hex('''PUSH1 0x60\n \
+                                        BLOCKHASH\n \
+                                        MSTORE\n \
+                                        PUSH1 0x2\n \
+                                        PUSH2 0x100\n \
+                                     ''')
             '0x606040526002610100'
             >>> EVMAsm.disassemble_hex('0x606040526002610100')
             'PUSH1 0x60\\nBLOCKHASH\\nMSTORE\\nPUSH1 0x2\\nPUSH2 0x100'
-    '''
+    """
 
     class Instruction(object):
         def __init__(self, opcode, name, operand_size, pops, pushes, fee, description, operand=None, pc=0):
-            '''
+            """
             This represents an EVM instruction.
             EVMAsm will create this for you.
 
@@ -51,29 +48,29 @@ class EVMAsm(object):
 
             Example use::
 
-                instruction = EVMAsm.assemble_one('PUSH1 0x10')
-                print 'Instruction: %s'% instruction
-                print '\tdescription:', instruction.description
-                print '\tgroup:', instruction.group
-                print '\tpc:', instruction.pc
-                print '\tsize:', instruction.size
-                print '\thas_operand:', instruction.has_operand
-                print '\toperand_size:', instruction.operand_size
-                print '\toperand:', instruction.operand
-                print '\tsemantics:', instruction.semantics
-                print '\tpops:', instruction.pops
-                print '\tpushes:', instruction.pushes
-                print '\tbytes:', '0x'+instruction.bytes.encode('hex')
-                print '\twrites to stack:', instruction.writes_to_stack
-                print '\treads from stack:', instruction.reads_from_stack
-                print '\twrites to memory:', instruction.writes_to_memory
-                print '\treads from memory:', instruction.reads_from_memory
-                print '\twrites to storage:', instruction.writes_to_storage
-                print '\treads from storage:', instruction.reads_from_storage
-                print '\tis terminator', instruction.is_terminator
+                >>> instruction = EVMAsm.assemble_one('PUSH1 0x10')
+                >>> print('Instruction: %s'% instruction)
+                >>> print('\tdescription:', instruction.description)
+                >>> print('\tgroup:', instruction.group)
+                >>> print('\tpc:', instruction.pc)
+                >>> print('\tsize:', instruction.size)
+                >>> print('\thas_operand:', instruction.has_operand)
+                >>> print('\toperand_size:', instruction.operand_size)
+                >>> print('\toperand:', instruction.operand)
+                >>> print('\tsemantics:', instruction.semantics)
+                >>> print('\tpops:', instruction.pops)
+                >>> print('\tpushes:', instruction.pushes)
+                >>> print('\tbytes:', '0x'+instruction.bytes.encode('hex'))
+                >>> print('\twrites to stack:', instruction.writes_to_stack)
+                >>> print('\treads from stack:', instruction.reads_from_stack)
+                >>> print('\twrites to memory:', instruction.writes_to_memory)
+                >>> print('\treads from memory:', instruction.reads_from_memory)
+                >>> print('\twrites to storage:', instruction.writes_to_storage)
+                >>> print('\treads from storage:', instruction.reads_from_storage)
+                >>> print('\tis terminator', instruction.is_terminator)
 
 
-            '''
+            """
             self._opcode = opcode
             self._name = name
             self._operand_size = operand_size
@@ -89,7 +86,7 @@ class EVMAsm(object):
             self._pc = pc
 
         def __eq__(self, other):
-            ''' Instructions are equal if all features match '''
+            """ Instructions are equal if all features match """
             return self._opcode == other._opcode and \
                    self._name == other._name and \
                    self._operand == other._operand and \
@@ -102,8 +99,8 @@ class EVMAsm(object):
 
         def __repr__(self):
             output = 'Instruction(0x%x, %r, %d, %d, %d, %d, %r, %r, %r)' % (
-            self._opcode, self._name, self._operand_size,
-            self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
+                self._opcode, self._name, self._operand_size,
+                self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
             return output
 
         def __str__(self):
@@ -112,12 +109,12 @@ class EVMAsm(object):
 
         @property
         def opcode(self):
-            ''' The opcode as an integer '''
+            """ The opcode as an integer """
             return self._opcode
 
         @property
         def name(self):
-            ''' The instruction name/mnemonic '''
+            """ The instruction name/mnemonic """
             if self._name == 'PUSH':
                 return 'PUSH%d' % self.operand_size
             elif self._name == 'DUP':
@@ -129,11 +126,11 @@ class EVMAsm(object):
             return self._name
 
         def parse_operand(self, buf):
-            ''' Parses an operand from buf
+            """ Parses an operand from buf
 
                 :param buf: a buffer
                 :type buf: iterator/generator/string
-            '''
+            """
             buf = iter(buf)
             try:
                 operand = 0
@@ -146,52 +143,52 @@ class EVMAsm(object):
 
         @property
         def operand_size(self):
-            ''' The immediate operand size '''
+            """ The immediate operand size """
             return self._operand_size
 
         @property
         def has_operand(self):
-            ''' True if the instruction uses an immediate operand'''
+            """ True if the instruction uses an immediate operand"""
             return self.operand_size > 0
 
         @property
         def operand(self):
-            ''' The immediate operand '''
+            """ The immediate operand """
             return self._operand
 
         @property
         def pops(self):
-            '''Number words popped from the stack'''
+            """ Number words popped from the stack """
             return self._pops
 
         @property
         def pushes(self):
-            '''Number words pushed to the stack'''
+            """ Number words pushed to the stack """
             return self._pushes
 
         @property
         def size(self):
-            ''' Size of the encoded instruction '''
+            """ Size of the encoded instruction """
             return self._operand_size + 1
 
         @property
         def fee(self):
-            ''' The basic gas fee of the instruction '''
+            """ The basic gas fee of the instruction """
             return self._fee
 
         @property
         def semantics(self):
-            ''' Canonical semantics '''
+            """ Canonical semantics """
             return self._name
 
         @property
         def description(self):
-            ''' Coloquial description of the instruction '''
+            """ Coloquial description of the instruction """
             return self._description
 
         @property
         def bytes(self):
-            ''' Encoded instruction '''
+            """ Encoded instruction """
             bytes = []
             bytes.append(chr(self._opcode))
             for offset in reversed(range(self.operand_size)):
@@ -201,12 +198,12 @@ class EVMAsm(object):
 
         @property
         def pc(self):
-            '''Location in the program (optional)'''
+            """Location in the program (optional)"""
             return self._pc
 
         @property
         def group(self):
-            '''Instruction classification as per the yellow paper'''
+            """ Instruction classification as per the yellow paper """
             classes = {
                 0: 'Stop and Arithmetic Operations',
                 1: 'Comparison & Bitwise Logic Operations',
@@ -225,79 +222,79 @@ class EVMAsm(object):
 
         @property
         def uses_stack(self):
-            ''' True if the instruction reads/writes from/to the stack '''
+            """ True if the instruction reads/writes from/to the stack """
             return self.reads_from_stack or self.writes_to_stack
 
         @property
         def reads_from_stack(self):
-            ''' True if the instruction reads from stack '''
+            """ True if the instruction reads from stack """
             return self.pops > 0
 
         @property
         def writes_to_stack(self):
-            ''' True if the instruction writes to the stack '''
+            """ True if the instruction writes to the stack """
             return self.pushes > 0
 
         @property
         def writes_to_memory(self):
-            ''' True if the instruction writes to memory '''
+            """ True if the instruction writes to memory """
             return self.semantics in ('MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY')
 
         @property
         def reads_from_memory(self):
-            ''' True if the instruction reads from memory '''
+            """ True if the instruction reads from memory """
             return self.semantics in ('MLOAD', 'CREATE', 'CALL', 'CALLCODE', 'RETURN', 'DELEGATECALL', 'REVERT')
 
         @property
         def writes_to_storage(self):
-            ''' True if the instruction writes to the storage '''
+            """ True if the instruction writes to the storage """
             return self.semantics in ('SSTORE')
 
         @property
         def reads_from_storage(self):
-            ''' True if the instruction reads from the storage '''
+            """ True if the instruction reads from the storage """
             return self.semantics in ('SLOAD')
 
         @property
         def is_terminator(self):
-            ''' True if the instruction is a basic block terminator '''
+            """ True if the instruction is a basic block terminator """
             return self.semantics in ('RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT')
 
         @property
         def is_endtx(self):
-            ''' True if the instruction is a transaction terminator '''
+            """ True if the instruction is a transaction terminator """
             return self.semantics in ('RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT')
 
         @property
         def is_starttx(self):
-            ''' True if the instruction is a transaction initiator '''
+            """ True if the instruction is a transaction initiator """
             return self.semantics in ('CREATE', 'CALL', 'CALLCODE', 'DELEGATECALL')
 
         @property
         def is_branch(self):
-            ''' True if the instruction is a jump'''
+            """ True if the instruction is a jump """
             return self.semantics in ('JUMP', 'JUMPI')
 
         @property
         def is_environmental(self):
-            ''' True if the instruction access enviromental data '''
+            """ True if the instruction access enviromental data """
             return self.group == 'Environmental Information'
 
         @property
         def is_system(self):
-            ''' True if the instruction is a system operation '''
+            """ True if the instruction is a system operation """
             return self.group == 'System operations'
 
         @property
         def uses_block_info(self):
-            ''' True if the instruction access block information'''
+            """ True if the instruction access block information"""
             return self.group == 'Block Information'
 
         @property
         def is_arithmetic(self):
-            ''' True if the instruction is an arithmetic operation '''
+            """ True if the instruction is an arithmetic operation """
             return self.semantics in (
-            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
+                'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
 
     # from http://gavwood.com/paper.pdf
     _table = {  # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
@@ -331,7 +328,8 @@ class EVMAsm(object):
         0x32: ('ORIGIN', 0, 0, 1, 2, 'Get execution origination address.'),
         0x33: ('CALLER', 0, 0, 1, 2, 'Get caller address.'),
         0x34: (
-        'CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
+            'CALLVALUE', 0, 0, 1, 2,
+            'Get deposited value by the instruction/transaction responsible for this execution.'),
         0x35: ('CALLDATALOAD', 0, 1, 1, 3, 'Get input data of current environment.'),
         0x36: ('CALLDATASIZE', 0, 0, 1, 2, 'Get size of input data in current environment.'),
         0x37: ('CALLDATACOPY', 0, 3, 0, 3, 'Copy input data in current environment to memory.'),
@@ -341,7 +339,8 @@ class EVMAsm(object):
         0x3b: ('EXTCODESIZE', 0, 1, 1, 20, "Get size of an account's code."),
         0x3c: ('EXTCODECOPY', 0, 4, 0, 20, "Copy an account's code to memory."),
         0x3d: (
-        'RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment'),
+            'RETURNDATASIZE', 0, 0, 1, 2,
+            'Get size of output data from the previous call from the current environment'),
         0x3e: ('RETURNDATACOPY', 0, 3, 0, 3, 'Copy output data from the previous call to memory'),
         0x40: ('BLOCKHASH', 0, 1, 1, 20, 'Get the hash of one of the 256 most recent complete blocks.'),
         0x41: ('COINBASE', 0, 0, 1, 2, "Get the block's beneficiary address."),
@@ -447,9 +446,9 @@ class EVMAsm(object):
     @staticmethod
     @memoized
     def _get_reverse_table():
-        ''' Build an internal table used in the assembler '''
+        """ Build an internal table used in the assembler """
         reverse_table = {}
-        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in list(EVMAsm._table.items()):
+        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in EVMAsm._table.items():
             mnemonic = name
             if name == 'PUSH':
                 mnemonic = '%s%d' % (name, (opcode & 0x1f) + 1)
@@ -461,7 +460,7 @@ class EVMAsm(object):
 
     @staticmethod
     def assemble_one(assembler, pc=0):
-        ''' Assemble one EVM instruction from its textual representation.
+        """ Assemble one EVM instruction from its textual representation.
 
             :param assembler: assembler code for one instruction
             :param pc: program counter of the instruction(optional)
@@ -469,10 +468,10 @@ class EVMAsm(object):
 
             Example use::
 
-                >>> print evm.EVMAsm.assemble_one('LT')
+                >>> print EVMAsm.assemble_one('LT')
 
 
-        '''
+        """
         try:
             _reverse_table = EVMAsm._get_reverse_table()
             assembler = assembler.strip().split(' ')
@@ -491,7 +490,7 @@ class EVMAsm(object):
 
     @staticmethod
     def assemble_all(assembler, pc=0):
-        ''' Assemble a sequence of textual representation of EVM instructions
+        """ Assemble a sequence of textual representation of EVM instructions
 
             :param assembler: assembler code for any number of instructions
             :param pc: program counter of the first instruction(optional)
@@ -499,19 +498,19 @@ class EVMAsm(object):
 
             Example use::
 
-                >>> evm.EVMAsm.encode_one("""PUSH1 0x60
-                    PUSH1 0x40
-                    MSTORE
-                    PUSH1 0x2
-                    PUSH2 0x108
-                    PUSH1 0x0
-                    POP
-                    SSTORE
-                    PUSH1 0x40
-                    MLOAD
-                    """)
+                >>> EVMAsm.assemble_one('''PUSH1 0x60\n \
+                                PUSH1 0x40\n \
+                                MSTORE\n \
+                                PUSH1 0x2\n \
+                                PUSH2 0x108\n \
+                                PUSH1 0x0\n \
+                                POP\n \
+                                SSTORE\n \
+                                PUSH1 0x40\n \
+                                MLOAD\n \
+                                ''')
 
-        '''
+        """
         if isinstance(assembler, str):
             assembler = assembler.split('\n')
         assembler = iter(assembler)
@@ -524,19 +523,20 @@ class EVMAsm(object):
 
     @staticmethod
     def disassemble_one(bytecode, pc=0):
-        ''' Decode a single instruction from a bytecode
+        """ Disassemble a single instruction from a bytecode
 
             :param bytecode: the bytecode stream
-            :type bytecode: bytearray or str
+            :type bytecode: bytes, str, bytearray
             :param pc: program counter of the instruction(optional)
-            :type bytecode: iterator/sequence/str
+            :type bytecode: iterator, sequence, str
             :return: an Instruction object
+            :rtype: EVMAsm.Instruction
 
             Example use::
 
                 >>> print EVMAsm.disassemble_one('\x60\x10')
 
-        '''
+        """
         if isinstance(bytecode, (str, bytes)):
             bytecode = bytearray(bytecode.encode())
         bytecode = iter(bytecode)
@@ -553,7 +553,7 @@ class EVMAsm(object):
 
     @staticmethod
     def disassemble_all(bytecode, pc=0):
-        ''' Decode all instructions in bytecode
+        """ Disassemble all instructions in bytecode
 
             :param bytecode: an evm bytecode (binary)
             :param pc: program counter of the first instruction(optional)
@@ -562,7 +562,7 @@ class EVMAsm(object):
 
             Example use::
 
-                >>> for inst in EVMAsm.decode_all(bytecode):
+                >>> for inst in EVMAsm.disassemble_all(bytecode):
                 ...    print inst
 
                 ...
@@ -578,7 +578,7 @@ class EVMAsm(object):
                 MLOAD
 
 
-        '''
+        """
 
         if isinstance(bytecode, str):
             bytecode = bytearray(bytecode.encode())
@@ -612,7 +612,7 @@ class EVMAsm(object):
 
     @staticmethod
     def assemble(asmcode, pc=0):
-        ''' Assemble an EVM program
+        """ Assemble an EVM program
 
             :param asmcode: an evm assembler program
             :param pc: program counter of the first instruction(optional)
@@ -621,21 +621,20 @@ class EVMAsm(object):
 
             Example use::
 
-                >>> EVMAsm.assemble(  """PUSH1 0x60
-                                           BLOCKHASH
-                                           MSTORE
-                                           PUSH1 0x2
-                                           PUSH2 0x100
-                                        """
-                                     )
+                >>> EVMAsm.assemble('''PUSH1 0x60\n \
+                                       BLOCKHASH\n \
+                                       MSTORE\n \
+                                       PUSH1 0x2\n \
+                                       PUSH2 0x100\n \
+                                    ''')
                 ...
                 "\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
-        '''
+        """
         return ''.join([x.bytes for x in EVMAsm.assemble_all(asmcode, pc=pc)])
 
     @staticmethod
     def disassemble_hex(bytecode, pc=0):
-        ''' Disassemble an EVM bytecode
+        """ Disassemble an EVM bytecode
 
             :param bytecode: canonical representation of an evm bytecode (hexadecimal)
             :param pc: program counter of the first instruction(optional)
@@ -652,7 +651,7 @@ class EVMAsm(object):
                 PUSH1 0x2
                 PUSH2 0x100
 
-        '''
+        """
         if bytecode.startswith('0x'):
             bytecode = bytecode[2:]
         bytecode = unhexlify(bytecode.encode())
@@ -660,7 +659,7 @@ class EVMAsm(object):
 
     @staticmethod
     def assemble_hex(asmcode, pc=0):
-        ''' Assemble an EVM program
+        """ Assemble an EVM program
 
             :param asmcode: an evm assembler program
             :param pc: program counter of the first instruction(optional)
@@ -669,14 +668,13 @@ class EVMAsm(object):
 
             Example use::
 
-                >>> EVMAsm.assemble_hex(  """PUSH1 0x60
-                                           BLOCKHASH
-                                           MSTORE
-                                           PUSH1 0x2
-                                           PUSH2 0x100
-                                        """
-                                     )
+                >>> EVMAsm.assemble_hex('''PUSH1 0x60\n \
+                                           BLOCKHASH\n \
+                                           MSTORE\n \
+                                           PUSH1 0x2\n \
+                                           PUSH2 0x100\n \
+                                        ''')
                 ...
                 "0x6060604052600261010"
-        '''
+        """
         return '0x' + hexlify(EVMAsm.assemble(asmcode, pc=pc).encode()).decode()

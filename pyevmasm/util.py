@@ -5,10 +5,11 @@ from future.builtins import object
 
 
 class memoized(object):
-    '''Decorator. Caches a function's return value each time it is called.
+    """
+    Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
     (not reevaluated).
-    '''
+    """
 
     def __init__(self, func):
         self.func = func
@@ -17,8 +18,7 @@ class memoized(object):
     def __call__(self, *args, **kwargs):
         key = args + tuple(sorted(kwargs.items()))
         if not isinstance(key, collections.Hashable):
-            # uncacheable. a list, for instance.
-            # better to not cache than blow up.
+            # Do no cache hashable collections.
             return self.func(*args, **kwargs)
         if key in self.cache:
             return self.cache[key]
@@ -28,9 +28,9 @@ class memoized(object):
             return value
 
     def __repr__(self):
-        '''Return the function's docstring.'''
+        """ Return the function's docstring. """
         return self.func.__doc__
 
     def __get__(self, obj, objtype):
-        '''Support instance methods.'''
+        """ Support instance methods. """
         return functools.partial(self.__call__, obj)
