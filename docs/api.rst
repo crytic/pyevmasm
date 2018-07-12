@@ -1,9 +1,10 @@
 API Reference
 =============
 
-EVMAsm
+evmasm
 ------
-.. autoclass:: pyevmasm.evmasm.EVMAsm
+.. automodule:: pyevmasm.evmasm
     :members:
-.. autoclass:: pyevmasm.evmasm::EVMAsm.Instruction
-    :members:
+.. py:data:: instruction
+
+    Instance of InstructionTable for EVM. (see; InstructionTable)

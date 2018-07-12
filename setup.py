@@ -15,7 +15,9 @@ setup(
     ],
     extras_require={
         'dev': [
-            'nose'
+            'nose',
+            'coverage',
+            'flake8'
         ]
     },
     entry_points={

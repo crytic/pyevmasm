@@ -1,304 +1,123 @@
-from builtins import map, next, chr, range, object
 from binascii import hexlify, unhexlify
-from .util import memoized
+from builtins import map, next, range, object
+from future.builtins import next, bytes
+
+"""
+    Example use::
+        >>> from pyevmasm import *
+        >>> disassemble_one('\\x60\\x10')
+        Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
+        >>> assemble_one('PUSH1 0x10')
+        Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
+        >>> tuple(disassemble_all('\\x30\\x31'))
+        (Instruction(0x30, 'ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.', None, 0),
+         Instruction(0x31, 'BALANCE', 0, 1, 1, 20, 'Get balance of the given account.', None, 1))
+        >>> tuple(assemble_all('ADDRESS\\nBALANCE'))
+        (Instruction(0x30, 'ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.', None, 0),
+         Instruction(0x31, 'BALANCE', 0, 1, 1, 20, 'Get balance of the given account.', None, 1))
+        >>> assemble_hex('''PUSH1 0x60\n \
+                                    BLOCKHASH\n \
+                                    MSTORE\n \
+                                    PUSH1 0x2\n \
+                                    PUSH2 0x100\n \
+                                 ''')
+        '0x606040526002610100'
+        >>> disassemble_hex('0x606040526002610100')
+        'PUSH1 0x60\\nBLOCKHASH\\nMSTORE\\nPUSH1 0x2\\nPUSH2 0x100'
+        
+"""
 
 
-class EVMAsm(object):
+class UnknownMnemonicError(Exception):
+    pass
+
+
+class UnknownOpcodeError(Exception):
+    pass
+
+
+class InstructionTable(dict):
     """
-        EVM Instruction factory
+    EVM Instruction factory
+        Implements an immutable, iterable instruction LUT that can be indexed by both mnemonic or opcode.
 
-        Example use::
-            >>> from pyevmasm import EVMAsm
-            >>> EVMAsm.disassemble_one('\\x60\\x10')
-            Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
-            >>> EVMAsm.assemble_one('PUSH1 0x10')
-            Instruction(0x60, 'PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.', 16, 0)
-            >>> tuple(EVMAsm.disassemble_all('\\x30\\x31'))
-            (Instruction(0x30, 'ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.', None, 0),
-             Instruction(0x31, 'BALANCE', 0, 1, 1, 20, 'Get balance of the given account.', None, 1))
-            >>> tuple(EVMAsm.assemble_all('ADDRESS\\nBALANCE'))
-            (Instruction(0x30, 'ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.', None, 0),
-             Instruction(0x31, 'BALANCE', 0, 1, 1, 20, 'Get balance of the given account.', None, 1))
-            >>> EVMAsm.assemble_hex('''PUSH1 0x60\n \
-                                        BLOCKHASH\n \
-                                        MSTORE\n \
-                                        PUSH1 0x2\n \
-                                        PUSH2 0x100\n \
-                                     ''')
-            '0x606040526002610100'
-            >>> EVMAsm.disassemble_hex('0x606040526002610100')
-            'PUSH1 0x60\\nBLOCKHASH\\nMSTORE\\nPUSH1 0x2\\nPUSH2 0x100'
+    Example::
+
+        >>> from pyevmasm import instruction_table
+        >>> instruction_table[0]
+        Instruction(0x0, 'STOP', 0, 0, 0, 0, 'Halts execution.', None, 0)
+        >>> instruction_table['STOP']
+        Instruction(0x0, 'STOP', 0, 0, 0, 0, 'Halts execution.', None, 0)
+        >>> i = instruction_table.__iter__()
+        >>> i.__next__()
+        Instruction(0x0, 'STOP', 0, 0, 0, 0, 'Halts execution.', None, 0)
+        >>> i.__next__()
+        Instruction(0x1, 'ADD', 0, 2, 1, 3, 'Addition operation.', None, 0)
+        >>> i.__next__()
+        Instruction(0x2, 'MUL', 0, 2, 1, 5, 'Multiplication operation.', None, 0)
+        >>> i.__next__()
+        Instruction(0x3, 'SUB', 0, 2, 1, 3, 'Subtraction operation.', None, 0)
+
     """
 
-    class Instruction(object):
-        def __init__(self, opcode, name, operand_size, pops, pushes, fee, description, operand=None, pc=0):
-            """
-            This represents an EVM instruction.
-            EVMAsm will create this for you.
+    def __init__(self, *args, **kwargs):
+        super(InstructionTable, self).__init__(*args, **kwargs)
+        # Don't build the reverse LUT unless we actually use it
+        self._rtable = None
 
-            :param opcode: the opcode value
-            :param name: instruction name
-            :param operand_size: immediate operand size in bytes
-            :param pops: number of items popped from the stack
-            :param pushes: number of items pushed into the stack
-            :param fee: gas fee for the instruction
-            :param description: textual description of the instruction
-            :param operand: optional immediate operand
-            :param pc: optional program counter of this instruction in the program
+    def _reverse_lut(self):
+        reverse_table = {}
+        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in self.items():
+            mnemonic = name
+            if name == 'PUSH':
+                mnemonic = '%s%d' % (name, (opcode & 0x1f) + 1)
+            elif name in ('SWAP', 'LOG', 'DUP'):
+                mnemonic = '%s%d' % (name, (opcode & 0xf) + 1)
+            reverse_table[mnemonic] = opcode, name, immediate_operand_size, pops, pushes, gas, description
+        return reverse_table
 
-            Example use::
+    @property
+    def reverse_table(self):
+        if not self._rtable:
+            self._rtable = self._reverse_lut()
+        return self._rtable
 
-                >>> instruction = EVMAsm.assemble_one('PUSH1 0x10')
-                >>> print('Instruction: %s'% instruction)
-                >>> print('\tdescription:', instruction.description)
-                >>> print('\tgroup:', instruction.group)
-                >>> print('\tpc:', instruction.pc)
-                >>> print('\tsize:', instruction.size)
-                >>> print('\thas_operand:', instruction.has_operand)
-                >>> print('\toperand_size:', instruction.operand_size)
-                >>> print('\toperand:', instruction.operand)
-                >>> print('\tsemantics:', instruction.semantics)
-                >>> print('\tpops:', instruction.pops)
-                >>> print('\tpushes:', instruction.pushes)
-                >>> print('\tbytes:', '0x'+instruction.bytes.encode('hex'))
-                >>> print('\twrites to stack:', instruction.writes_to_stack)
-                >>> print('\treads from stack:', instruction.reads_from_stack)
-                >>> print('\twrites to memory:', instruction.writes_to_memory)
-                >>> print('\treads from memory:', instruction.reads_from_memory)
-                >>> print('\twrites to storage:', instruction.writes_to_storage)
-                >>> print('\treads from storage:', instruction.reads_from_storage)
-                >>> print('\tis terminator', instruction.is_terminator)
+    def __iter__(self):
+        self._k = iter(self.keys())
+        return self
 
+    def next(self):
+        # For Python 2 support
+        return self.__next__()
 
-            """
-            self._opcode = opcode
-            self._name = name
-            self._operand_size = operand_size
-            self._pops = pops
-            self._pushes = pushes
-            self._fee = fee
-            self._description = description
-            self._operand = operand  # Immediate operand if any
-            if operand_size != 0 and operand is not None:
-                mask = (1 << operand_size * 8) - 1
-                if ~mask & operand:
-                    raise ValueError("operand should be %d bits long" % (operand_size * 8))
-            self._pc = pc
+    def __next__(self):
+        opcode = next(self._k)
+        return Instruction(opcode, *super(InstructionTable, self).__getitem__(opcode))
 
-        def __eq__(self, other):
-            """ Instructions are equal if all features match """
-            return self._opcode == other._opcode and \
-                   self._name == other._name and \
-                   self._operand == other._operand and \
-                   self._operand_size == other._operand_size and \
-                   self._pops == other._pops and \
-                   self._pushes == other._pushes and \
-                   self._fee == other._fee and \
-                   self._pc == other._pc and \
-                   self._description == other._description
-
-        def __repr__(self):
-            output = 'Instruction(0x%x, %r, %d, %d, %d, %d, %r, %r, %r)' % (
-                self._opcode, self._name, self._operand_size,
-                self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
-            return output
-
-        def __str__(self):
-            output = self.name + (' 0x%x' % self.operand if self.has_operand else '')
-            return output
-
-        @property
-        def opcode(self):
-            """ The opcode as an integer """
-            return self._opcode
-
-        @property
-        def name(self):
-            """ The instruction name/mnemonic """
-            if self._name == 'PUSH':
-                return 'PUSH%d' % self.operand_size
-            elif self._name == 'DUP':
-                return 'DUP%d' % self.pops
-            elif self._name == 'SWAP':
-                return 'SWAP%d' % (self.pops - 1)
-            elif self._name == 'LOG':
-                return 'LOG%d' % (self.pops - 2)
-            return self._name
-
-        def parse_operand(self, buf):
-            """ Parses an operand from buf
-
-                :param buf: a buffer
-                :type buf: iterator/generator/string
-            """
-            buf = iter(buf)
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            raise NotImplementedError
+        if isinstance(item, int):
             try:
-                operand = 0
-                for _ in range(self.operand_size):
-                    operand <<= 8
-                    operand |= next(buf)
-                self._operand = operand
-            except StopIteration:
-                raise Exception("Not enough data for decoding")
+                return Instruction(item, *super(InstructionTable, self).__getitem__(item))
+            except KeyError:
+                try:
+                    return Instruction(*self.reverse_table['INVALID'])
+                except KeyError:
+                    raise UnknownOpcodeError(item)
+        elif isinstance(item, str):
+            try:
+                return Instruction(*self.reverse_table[item])
+            except KeyError:
+                raise UnknownMnemonicError(item)
 
-        @property
-        def operand_size(self):
-            """ The immediate operand size """
-            return self._operand_size
+    def __setitem__(self, key, value):
+        return
 
-        @property
-        def has_operand(self):
-            """ True if the instruction uses an immediate operand"""
-            return self.operand_size > 0
 
-        @property
-        def operand(self):
-            """ The immediate operand """
-            return self._operand
-
-        @property
-        def pops(self):
-            """ Number words popped from the stack """
-            return self._pops
-
-        @property
-        def pushes(self):
-            """ Number words pushed to the stack """
-            return self._pushes
-
-        @property
-        def size(self):
-            """ Size of the encoded instruction """
-            return self._operand_size + 1
-
-        @property
-        def fee(self):
-            """ The basic gas fee of the instruction """
-            return self._fee
-
-        @property
-        def semantics(self):
-            """ Canonical semantics """
-            return self._name
-
-        @property
-        def description(self):
-            """ Coloquial description of the instruction """
-            return self._description
-
-        @property
-        def bytes(self):
-            """ Encoded instruction """
-            bytes = []
-            bytes.append(chr(self._opcode))
-            for offset in reversed(range(self.operand_size)):
-                c = (self.operand >> offset * 8) & 0xff
-                bytes.append(chr(c))
-            return ''.join(bytes)
-
-        @property
-        def pc(self):
-            """Location in the program (optional)"""
-            return self._pc
-
-        @property
-        def group(self):
-            """ Instruction classification as per the yellow paper """
-            classes = {
-                0: 'Stop and Arithmetic Operations',
-                1: 'Comparison & Bitwise Logic Operations',
-                2: 'SHA3',
-                3: 'Environmental Information',
-                4: 'Block Information',
-                5: 'Stack, Memory, Storage and Flow Operations',
-                6: 'Push Operations',
-                7: 'Push Operations',
-                8: 'Duplication Operations',
-                9: 'Exchange Operations',
-                0xa: 'Logging Operations',
-                0xf: 'System operations'
-            }
-            return classes.get(self.opcode >> 4, 'Invalid instruction')
-
-        @property
-        def uses_stack(self):
-            """ True if the instruction reads/writes from/to the stack """
-            return self.reads_from_stack or self.writes_to_stack
-
-        @property
-        def reads_from_stack(self):
-            """ True if the instruction reads from stack """
-            return self.pops > 0
-
-        @property
-        def writes_to_stack(self):
-            """ True if the instruction writes to the stack """
-            return self.pushes > 0
-
-        @property
-        def writes_to_memory(self):
-            """ True if the instruction writes to memory """
-            return self.semantics in ('MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY')
-
-        @property
-        def reads_from_memory(self):
-            """ True if the instruction reads from memory """
-            return self.semantics in ('MLOAD', 'CREATE', 'CALL', 'CALLCODE', 'RETURN', 'DELEGATECALL', 'REVERT')
-
-        @property
-        def writes_to_storage(self):
-            """ True if the instruction writes to the storage """
-            return self.semantics in ('SSTORE')
-
-        @property
-        def reads_from_storage(self):
-            """ True if the instruction reads from the storage """
-            return self.semantics in ('SLOAD')
-
-        @property
-        def is_terminator(self):
-            """ True if the instruction is a basic block terminator """
-            return self.semantics in ('RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT')
-
-        @property
-        def is_endtx(self):
-            """ True if the instruction is a transaction terminator """
-            return self.semantics in ('RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT')
-
-        @property
-        def is_starttx(self):
-            """ True if the instruction is a transaction initiator """
-            return self.semantics in ('CREATE', 'CALL', 'CALLCODE', 'DELEGATECALL')
-
-        @property
-        def is_branch(self):
-            """ True if the instruction is a jump """
-            return self.semantics in ('JUMP', 'JUMPI')
-
-        @property
-        def is_environmental(self):
-            """ True if the instruction access enviromental data """
-            return self.group == 'Environmental Information'
-
-        @property
-        def is_system(self):
-            """ True if the instruction is a system operation """
-            return self.group == 'System operations'
-
-        @property
-        def uses_block_info(self):
-            """ True if the instruction access block information"""
-            return self.group == 'Block Information'
-
-        @property
-        def is_arithmetic(self):
-            """ True if the instruction is an arithmetic operation """
-            return self.semantics in (
-                'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
-
-    # from http://gavwood.com/paper.pdf
-    _table = {  # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
-
+# from http://gavwood.com/paper.pdf
+instruction_table = InstructionTable({
+    # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
         0x00: ('STOP', 0, 0, 0, 0, 'Halts execution.'),
         0x01: ('ADD', 0, 2, 1, 3, 'Addition operation.'),
         0x02: ('MUL', 0, 2, 1, 5, 'Multiplication operation.'),
@@ -327,9 +146,7 @@ class EVMAsm(object):
         0x31: ('BALANCE', 0, 1, 1, 20, 'Get balance of the given account.'),
         0x32: ('ORIGIN', 0, 0, 1, 2, 'Get execution origination address.'),
         0x33: ('CALLER', 0, 0, 1, 2, 'Get caller address.'),
-        0x34: (
-            'CALLVALUE', 0, 0, 1, 2,
-            'Get deposited value by the instruction/transaction responsible for this execution.'),
+        0x34: ('CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
         0x35: ('CALLDATALOAD', 0, 1, 1, 3, 'Get input data of current environment.'),
         0x36: ('CALLDATASIZE', 0, 0, 1, 2, 'Get size of input data in current environment.'),
         0x37: ('CALLDATACOPY', 0, 3, 0, 3, 'Copy input data in current environment to memory.'),
@@ -338,9 +155,7 @@ class EVMAsm(object):
         0x3a: ('GASPRICE', 0, 0, 1, 2, 'Get price of gas in current environment.'),
         0x3b: ('EXTCODESIZE', 0, 1, 1, 20, "Get size of an account's code."),
         0x3c: ('EXTCODECOPY', 0, 4, 0, 20, "Copy an account's code to memory."),
-        0x3d: (
-            'RETURNDATASIZE', 0, 0, 1, 2,
-            'Get size of output data from the previous call from the current environment'),
+        0x3d: ('RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment'),
         0x3e: ('RETURNDATACOPY', 0, 3, 0, 3, 'Copy output data from the previous call to memory'),
         0x40: ('BLOCKHASH', 0, 1, 1, 20, 'Get the hash of one of the 256 most recent complete blocks.'),
         0x41: ('COINBASE', 0, 0, 1, 2, "Get the block's beneficiary address."),
@@ -358,8 +173,7 @@ class EVMAsm(object):
         0x57: ('JUMPI', 0, 2, 0, 10, 'Conditionally alter the program counter.'),
         0x58: ('GETPC', 0, 0, 1, 2, 'Get the value of the program counter prior to the increment.'),
         0x59: ('MSIZE', 0, 0, 1, 2, 'Get the size of active memory in bytes.'),
-        0x5a: ('GAS', 0, 0, 1, 2,
-               'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
+        0x5a: ('GAS', 0, 0, 1, 2, 'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
         0x5b: ('JUMPDEST', 0, 0, 0, 1, 'Mark a valid destination for jumps.'),
         0x60: ('PUSH', 1, 0, 1, 0, 'Place 1 byte item on stack.'),
         0x61: ('PUSH', 2, 0, 1, 0, 'Place 2-byte item on stack.'),
@@ -434,247 +248,524 @@ class EVMAsm(object):
         0xf1: ('CALL', 0, 7, 1, 40, 'Message-call into an account.'),
         0xf2: ('CALLCODE', 0, 7, 1, 40, "Message-call into this account with alternative account's code."),
         0xf3: ('RETURN', 0, 2, 0, 0, 'Halt execution returning output data.'),
-        0xf4: ('DELEGATECALL', 0, 6, 1, 40,
-               "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
+        0xf4: ('DELEGATECALL', 0, 6, 1, 40, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
         0xfa: ('STATICCALL', 0, 6, 1, 40, 'Static message-call into an account.'),
-        0xfd: ('REVERT', 0, 2, 0, 0,
-               'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
+        0xfd: ('REVERT', 0, 2, 0, 0, 'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
         0xfe: ('INVALID', 0, 0, 0, 0, 'Designated invalid instruction.'),
         0xff: ('SELFDESTRUCT', 0, 1, 0, 5000, 'Halt execution and register account for later deletion.')
-    }
+    })
 
-    @staticmethod
-    @memoized
-    def _get_reverse_table():
-        """ Build an internal table used in the assembler """
-        reverse_table = {}
-        for (opcode, (name, immediate_operand_size, pops, pushes, gas, description)) in EVMAsm._table.items():
-            mnemonic = name
-            if name == 'PUSH':
-                mnemonic = '%s%d' % (name, (opcode & 0x1f) + 1)
-            elif name in ('SWAP', 'LOG', 'DUP'):
-                mnemonic = '%s%d' % (name, (opcode & 0xf) + 1)
 
-            reverse_table[mnemonic] = opcode, name, immediate_operand_size, pops, pushes, gas, description
-        return reverse_table
+class Instruction(object):
+    def __init__(self, opcode, name, operand_size, pops, pushes, fee, description, operand=None, pc=0):
+        """
+        This represents an EVM instruction.
+        EVMAsm will create this for you.
 
-    @staticmethod
-    def assemble_one(assembler, pc=0):
-        """ Assemble one EVM instruction from its textual representation.
+        :param opcode: the opcode value
+        :param name: instruction name
+        :param operand_size: immediate operand size in bytes
+        :param pops: number of items popped from the stack
+        :param pushes: number of items pushed into the stack
+        :param fee: gas fee for the instruction
+        :param description: textual description of the instruction
+        :param operand: optional immediate operand
+        :param pc: optional program counter of this instruction in the program
 
-            :param assembler: assembler code for one instruction
-            :param pc: program counter of the instruction(optional)
-            :return: An Instruction object
+        Example use::
 
-            Example use::
-
-                >>> print EVMAsm.assemble_one('LT')
+            >>> instruction = assemble_one('PUSH1 0x10')
+            >>> print('Instruction: %s'% instruction)
+            >>> print('\tdescription:', instruction.description)
+            >>> print('\tgroup:', instruction.group)
+            >>> print('\tpc:', instruction.pc)
+            >>> print('\tsize:', instruction.size)
+            >>> print('\thas_operand:', instruction.has_operand)
+            >>> print('\toperand_size:', instruction.operand_size)
+            >>> print('\toperand:', instruction.operand)
+            >>> print('\tsemantics:', instruction.semantics)
+            >>> print('\tpops:', instruction.pops)
+            >>> print('\tpushes:', instruction.pushes)
+            >>> print('\tbytes:', '0x'+instruction.bytes.encode('hex'))
+            >>> print('\twrites to stack:', instruction.writes_to_stack)
+            >>> print('\treads from stack:', instruction.reads_from_stack)
+            >>> print('\twrites to memory:', instruction.writes_to_memory)
+            >>> print('\treads from memory:', instruction.reads_from_memory)
+            >>> print('\twrites to storage:', instruction.writes_to_storage)
+            >>> print('\treads from storage:', instruction.reads_from_storage)
+            >>> print('\tis terminator', instruction.is_terminator)
 
 
         """
+        self._opcode = opcode
+        self._name = name
+        self._operand_size = operand_size
+        self._pops = pops
+        self._pushes = pushes
+        self._fee = fee
+        self._description = description
+        self._operand = operand  # Immediate operand if any
+        self._pc = pc
+
+    def __eq__(self, other):
+        """ Instructions are equal if all features match """
+        return self._opcode == other._opcode and \
+               self._name == other._name and \
+               self._operand == other._operand and \
+               self._operand_size == other._operand_size and \
+               self._pops == other._pops and \
+               self._pushes == other._pushes and \
+               self._fee == other._fee and \
+               self._pc == other._pc and \
+               self._description == other._description
+
+    def __repr__(self):
+        output = 'Instruction(0x%x, %r, %d, %d, %d, %d, %r, %r, %r)' % (
+            self._opcode, self._name, self._operand_size,
+            self._pops, self._pushes, self._fee, self._description, self._operand, self._pc)
+        return output
+
+    def __str__(self):
+        return self.name + (' 0x%x' % self.operand if self.has_operand else '')
+
+    @property
+    def opcode(self):
+        """ The opcode as an integer """
+        return self._opcode
+
+    @property
+    def mnemonic(self):
+        """ Alias for name """
+        return self.name
+
+    @property
+    def name(self):
+        """ The instruction name/mnemonic """
+        if self._name == 'PUSH':
+            return 'PUSH%d' % self.operand_size
+        elif self._name == 'DUP':
+            return 'DUP%d' % self.pops
+        elif self._name == 'SWAP':
+            return 'SWAP%d' % (self.pops - 1)
+        elif self._name == 'LOG':
+            return 'LOG%d' % (self.pops - 2)
+        return self._name
+
+    def parse_operand(self, buf):
+        """ Parses an operand from buf
+
+            :param buf: a buffer
+            :type buf: iterator/generator/string
+        """
+        buf = iter(buf)
         try:
-            _reverse_table = EVMAsm._get_reverse_table()
-            assembler = assembler.strip().split(' ')
-            opcode, name, operand_size, pops, pushes, gas, description = _reverse_table[assembler[0].upper()]
-            if operand_size > 0:
-                assert len(assembler) == 2
-                operand = int(assembler[1], 0)
-            else:
-                assert len(assembler) == 1
-                operand = None
+            operand = 0
+            for _ in range(self.operand_size):
+                operand <<= 8
+                operand |= next(buf)
+            self._operand = operand
+        except StopIteration:
+            raise Exception("Not enough data for decoding")
 
-            return EVMAsm.Instruction(opcode, name, operand_size, pops, pushes, gas, description, operand=operand,
-                                      pc=pc)
-        except BaseException:
-            raise Exception("Something wrong at pc %d" % pc)
+    @property
+    def operand_size(self):
+        """ The immediate operand size """
+        return self._operand_size
 
-    @staticmethod
-    def assemble_all(assembler, pc=0):
-        """ Assemble a sequence of textual representation of EVM instructions
+    @property
+    def has_operand(self):
+        """ True if the instruction uses an immediate operand"""
+        return self.operand_size > 0
 
-            :param assembler: assembler code for any number of instructions
-            :param pc: program counter of the first instruction(optional)
-            :return: An generator of Instruction objects
+    @property
+    def operand(self):
+        return self._operand
 
-            Example use::
+    @operand.setter
+    def operand(self, value):
+        if self.operand_size != 0 and value is not None:
+            mask = (1 << self.operand_size * 8) - 1
+            if ~mask & value:
+                raise ValueError("operand should be %d bits long" % (self.operand_size * 8))
+            self._operand = value
 
-                >>> EVMAsm.assemble_one('''PUSH1 0x60\n \
-                                PUSH1 0x40\n \
-                                MSTORE\n \
-                                PUSH1 0x2\n \
-                                PUSH2 0x108\n \
-                                PUSH1 0x0\n \
-                                POP\n \
-                                SSTORE\n \
-                                PUSH1 0x40\n \
-                                MLOAD\n \
+    @property
+    def pops(self):
+        """ Number words popped from the stack """
+        return self._pops
+
+    @property
+    def pushes(self):
+        """ Number words pushed to the stack """
+        return self._pushes
+
+    @property
+    def size(self):
+        """ Size of the encoded instruction """
+        return self._operand_size + 1
+
+    @property
+    def fee(self):
+        """ The basic gas fee of the instruction """
+        return self._fee
+
+    @property
+    def semantics(self):
+        """ Canonical semantics """
+        return self._name
+
+    @property
+    def description(self):
+        """ Colloquial description of the instruction """
+        return self._description
+
+    @property
+    def bytes(self):
+        """ Encoded instruction """
+        b = [bytes([self._opcode])]
+        for offset in reversed(range(self.operand_size)):
+            b.append(bytes([(self.operand >> offset * 8) & 0xff]))
+        return b''.join(b)
+
+    @property
+    def pc(self):
+        return self._pc
+
+    @pc.setter
+    def pc(self, value):
+        """Location in the program (optional)"""
+        self._pc = value
+
+    @property
+    def group(self):
+        """ Instruction classification as per the yellow paper """
+        classes = {
+            0: 'Stop and Arithmetic Operations',
+            1: 'Comparison & Bitwise Logic Operations',
+            2: 'SHA3',
+            3: 'Environmental Information',
+            4: 'Block Information',
+            5: 'Stack, Memory, Storage and Flow Operations',
+            6: 'Push Operations',
+            7: 'Push Operations',
+            8: 'Duplication Operations',
+            9: 'Exchange Operations',
+            0xa: 'Logging Operations',
+            0xf: 'System operations'
+        }
+        return classes.get(self.opcode >> 4, 'Invalid instruction')
+
+    @property
+    def uses_stack(self):
+        """ True if the instruction reads/writes from/to the stack """
+        return self.reads_from_stack or self.writes_to_stack
+
+    @property
+    def reads_from_stack(self):
+        """ True if the instruction reads from stack """
+        return self.pops > 0
+
+    @property
+    def writes_to_stack(self):
+        """ True if the instruction writes to the stack """
+        return self.pushes > 0
+
+    @property
+    def writes_to_memory(self):
+        """ True if the instruction writes to memory """
+        return self.semantics in ('MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY')
+
+    @property
+    def reads_from_memory(self):
+        """ True if the instruction reads from memory """
+        return self.semantics in ('MLOAD', 'CREATE', 'CALL', 'CALLCODE', 'RETURN', 'DELEGATECALL', 'REVERT')
+
+    @property
+    def writes_to_storage(self):
+        """ True if the instruction writes to the storage """
+        return self.semantics in 'SSTORE'
+
+    @property
+    def reads_from_storage(self):
+        """ True if the instruction reads from the storage """
+        return self.semantics in 'SLOAD'
+
+    @property
+    def is_terminator(self):
+        """ True if the instruction is a basic block terminator """
+        return self.semantics in ('RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT')
+
+    @property
+    def is_endtx(self):
+        """ True if the instruction is a transaction terminator """
+        return self.semantics in ('RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT')
+
+    @property
+    def is_starttx(self):
+        """ True if the instruction is a transaction initiator """
+        return self.semantics in ('CREATE', 'CALL', 'CALLCODE', 'DELEGATECALL')
+
+    @property
+    def is_branch(self):
+        """ True if the instruction is a jump """
+        return self.semantics in ('JUMP', 'JUMPI')
+
+    @property
+    def is_environmental(self):
+        """ True if the instruction access enviromental data """
+        return self.group == 'Environmental Information'
+
+    @property
+    def is_system(self):
+        """ True if the instruction is a system operation """
+        return self.group == 'System operations'
+
+    @property
+    def uses_block_info(self):
+        """ True if the instruction access block information"""
+        return self.group == 'Block Information'
+
+    @property
+    def is_arithmetic(self):
+        """ True if the instruction is an arithmetic operation """
+        return self.semantics in (
+            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
+
+
+def assemble_one(asmcode, pc=0):
+    """ Assemble one EVM instruction from its textual representation.
+
+        :param asmcode: assembly code for one instruction
+        :type asmcode: str
+        :param pc: program counter of the instruction(optional)
+        :type pc: int
+        :return: An Instruction object
+        :rtype: Instruction
+
+        Example use::
+
+            >>> print assemble_one('LT')
+
+
+    """
+    try:
+        asmcode = asmcode.strip().split(' ')
+        instr = instruction_table[asmcode[0].upper()]
+        if pc:
+            instr.pc = pc
+        if instr.operand_size > 0:
+            assert len(asmcode) == 2
+            instr.operand = int(asmcode[1], 0)
+        return instr
+    except BaseException:
+        raise Exception("Something wrong at pc %d" % pc)
+
+
+def assemble_all(asmcode, pc=0):
+    """ Assemble a sequence of textual representation of EVM instructions
+
+        :param asmcode: assembly code for any number of instructions
+        :type asmcode: str
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: An generator of Instruction objects
+        :rtype: generator[Instructions]
+
+        Example use::
+
+            >>> assemble_one('''PUSH1 0x60\n \
+                            PUSH1 0x40\n \
+                            MSTORE\n \
+                            PUSH1 0x2\n \
+                            PUSH2 0x108\n \
+                            PUSH1 0x0\n \
+                            POP\n \
+                            SSTORE\n \
+                            PUSH1 0x40\n \
+                            MLOAD\n \
+                            ''')
+
+    """
+
+    asmcode = asmcode.split('\n')
+    asmcode = iter(asmcode)
+    for line in asmcode:
+        if not line.strip():
+            continue
+        instr = assemble_one(line, pc=pc)
+        yield instr
+        pc += instr.size
+
+
+def disassemble_one(bytecode, pc=0):
+    """ Disassemble a single instruction from a bytecode
+
+        :param bytecode: the bytecode stream
+        :type bytecode: str | bytes | bytearray | iterator
+        :param pc: program counter of the instruction(optional)
+        :type pc: int
+        :return: an Instruction object
+        :rtype: Instruction
+
+        Example use::
+
+            >>> print disassemble_one('\x60\x10')
+
+    """
+    if isinstance(bytecode, bytes):
+        bytecode = bytearray(bytecode)
+    if isinstance(bytecode, str):
+        bytecode = bytearray(bytecode.encode('latin-1'))
+
+    bytecode = iter(bytecode)
+    opcode = next(bytecode)
+
+    assert isinstance(opcode, int)
+
+    instruction = instruction_table[opcode]
+    instruction.pc = pc
+
+    if instruction.has_operand:
+        instruction.parse_operand(bytecode)
+
+    return instruction
+
+
+def disassemble_all(bytecode, pc=0):
+    """ Disassemble all instructions in bytecode
+
+        :param bytecode: an evm bytecode (binary)
+        :type bytecode: str | bytes | bytearray | iterator
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: An generator of Instruction objects
+        :rtype: list[Instruction]
+
+        Example use::
+
+            >>> for inst in disassemble_all(bytecode):
+            ...    print(instr)
+
+            ...
+            PUSH1 0x60
+            PUSH1 0x40
+            MSTORE
+            PUSH1 0x2
+            PUSH2 0x108
+            PUSH1 0x0
+            POP
+            SSTORE
+            PUSH1 0x40
+            MLOAD
+
+
+    """
+
+    if isinstance(bytecode, bytes):
+        bytecode = bytearray(bytecode)
+    if isinstance(bytecode, str):
+        bytecode = bytearray(bytecode.encode('latin-1'))
+
+    bytecode = iter(bytecode)
+    while True:
+        instr = disassemble_one(bytecode, pc=pc)
+        pc += instr.size
+        yield instr
+
+
+def disassemble(bytecode, pc=0):
+    """ Disassemble an EVM bytecode
+
+        :param bytecode: binary representation of an evm bytecode
+        :type bytecode: str | bytes | bytearray
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: the text representation of the assembler code
+
+        Example use::
+
+            >>> disassemble("\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00")
+            ...
+            PUSH1 0x60
+            BLOCKHASH
+            MSTORE
+            PUSH1 0x2
+            PUSH2 0x100
+
+    """
+    return '\n'.join(map(str, disassemble_all(bytecode, pc=pc)))
+
+
+def assemble(asmcode, pc=0):
+    """ Assemble an EVM program
+
+        :param asmcode: an evm assembler program
+        :type asmcode: str
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: the hex representation of the bytecode
+        :rtype: str
+
+        Example use::
+
+            >>> assemble('''PUSH1 0x60\n \
+                                   BLOCKHASH\n \
+                                   MSTORE\n \
+                                   PUSH1 0x2\n \
+                                   PUSH2 0x100\n \
                                 ''')
-
-        """
-        if isinstance(assembler, str):
-            assembler = assembler.split('\n')
-        assembler = iter(assembler)
-        for line in assembler:
-            if not line.strip():
-                continue
-            instr = EVMAsm.assemble_one(line, pc=pc)
-            yield instr
-            pc += instr.size
-
-    @staticmethod
-    def disassemble_one(bytecode, pc=0):
-        """ Disassemble a single instruction from a bytecode
-
-            :param bytecode: the bytecode stream
-            :type bytecode: bytes, str, bytearray
-            :param pc: program counter of the instruction(optional)
-            :type bytecode: iterator, sequence, str
-            :return: an Instruction object
-            :rtype: EVMAsm.Instruction
-
-            Example use::
-
-                >>> print EVMAsm.disassemble_one('\x60\x10')
-
-        """
-        if isinstance(bytecode, (str, bytes)):
-            bytecode = bytearray(bytecode.encode())
-        bytecode = iter(bytecode)
-        opcode = next(bytecode)
-        assert isinstance(opcode, int)
-
-        invalid = ('INVALID', 0, 0, 0, 0, 'Unknown opcode')
-        name, operand_size, pops, pushes, gas, description = EVMAsm._table.get(opcode, invalid)
-        instruction = EVMAsm.Instruction(opcode, name, operand_size, pops, pushes, gas, description, pc=pc)
-        if instruction.has_operand:
-            instruction.parse_operand(bytecode)
-
-        return instruction
-
-    @staticmethod
-    def disassemble_all(bytecode, pc=0):
-        """ Disassemble all instructions in bytecode
-
-            :param bytecode: an evm bytecode (binary)
-            :param pc: program counter of the first instruction(optional)
-            :type bytecode: iterator/sequence/str
-            :return: An generator of Instruction objects
-
-            Example use::
-
-                >>> for inst in EVMAsm.disassemble_all(bytecode):
-                ...    print inst
-
-                ...
-                PUSH1 0x60
-                PUSH1 0x40
-                MSTORE
-                PUSH1 0x2
-                PUSH2 0x108
-                PUSH1 0x0
-                POP
-                SSTORE
-                PUSH1 0x40
-                MLOAD
+            ...
+            b"\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
+    """
+    return b''.join([x.bytes for x in assemble_all(asmcode, pc=pc)])
 
 
-        """
+def disassemble_hex(bytecode, pc=0):
+    """ Disassemble an EVM bytecode
 
-        if isinstance(bytecode, str):
-            bytecode = bytearray(bytecode.encode())
-        bytecode = iter(bytecode)
-        while True:
-            instr = EVMAsm.disassemble_one(bytecode, pc=pc)
-            pc += instr.size
-            yield instr
+        :param bytecode: canonical representation of an evm bytecode (hexadecimal)
+        :type bytecode: str
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: the text representation of the assembler code
+        :rtype: str
 
-    @staticmethod
-    def disassemble(bytecode, pc=0):
-        ''' Disassemble an EVM bytecode
+        Example use::
 
-            :param bytecode: binary representation of an evm bytecode (hexadecimal)
-            :param pc: program counter of the first instruction(optional)
-            :type bytecode: str
-            :return: the text representation of the aseembler code
+            >>> disassemble_hex("0x6060604052600261010")
+            ...
+            PUSH1 0x60
+            BLOCKHASH
+            MSTORE
+            PUSH1 0x2
+            PUSH2 0x100
 
-            Example use::
+    """
+    if bytecode.startswith('0x'):
+        bytecode = bytecode[2:]
+    bytecode = unhexlify(bytecode)
+    return disassemble(bytecode, pc=pc)
 
-                >>> EVMAsm.disassemble("\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00")
-                ...
-                PUSH1 0x60
-                BLOCKHASH
-                MSTORE
-                PUSH1 0x2
-                PUSH2 0x100
 
-        '''
-        return '\n'.join(map(str, EVMAsm.disassemble_all(bytecode, pc=pc)))
+def assemble_hex(asmcode, pc=0):
+    """ Assemble an EVM program
 
-    @staticmethod
-    def assemble(asmcode, pc=0):
-        """ Assemble an EVM program
+        :param asmcode: an evm assembler program
+        :type asmcode: str
+        :param pc: program counter of the first instruction(optional)
+        :type pc: int
+        :return: the hex representation of the bytecode
+        :rtype: str
 
-            :param asmcode: an evm assembler program
-            :param pc: program counter of the first instruction(optional)
-            :type asmcode: str
-            :return: the hex representation of the bytecode
+        Example use::
 
-            Example use::
-
-                >>> EVMAsm.assemble('''PUSH1 0x60\n \
+            >>> assemble_hex('''PUSH1 0x60\n \
                                        BLOCKHASH\n \
                                        MSTORE\n \
                                        PUSH1 0x2\n \
                                        PUSH2 0x100\n \
                                     ''')
-                ...
-                "\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
-        """
-        return ''.join([x.bytes for x in EVMAsm.assemble_all(asmcode, pc=pc)])
-
-    @staticmethod
-    def disassemble_hex(bytecode, pc=0):
-        """ Disassemble an EVM bytecode
-
-            :param bytecode: canonical representation of an evm bytecode (hexadecimal)
-            :param pc: program counter of the first instruction(optional)
-            :type bytecode: str
-            :return: the text representation of the aseembler code
-
-            Example use::
-
-                >>> EVMAsm.disassemble_hex("0x6060604052600261010")
-                ...
-                PUSH1 0x60
-                BLOCKHASH
-                MSTORE
-                PUSH1 0x2
-                PUSH2 0x100
-
-        """
-        if bytecode.startswith('0x'):
-            bytecode = bytecode[2:]
-        bytecode = unhexlify(bytecode.encode())
-        return EVMAsm.disassemble(bytecode, pc=pc)
-
-    @staticmethod
-    def assemble_hex(asmcode, pc=0):
-        """ Assemble an EVM program
-
-            :param asmcode: an evm assembler program
-            :param pc: program counter of the first instruction(optional)
-            :type asmcode: str
-            :return: the hex representation of the bytecode
-
-            Example use::
-
-                >>> EVMAsm.assemble_hex('''PUSH1 0x60\n \
-                                           BLOCKHASH\n \
-                                           MSTORE\n \
-                                           PUSH1 0x2\n \
-                                           PUSH2 0x100\n \
-                                        ''')
-                ...
-                "0x6060604052600261010"
-        """
-        return '0x' + hexlify(EVMAsm.assemble(asmcode, pc=pc).encode()).decode()
+            ...
+            "0x6060604052600261010"
+    """
+    return '0x' + hexlify(assemble(asmcode, pc=pc)).decode('ascii')
