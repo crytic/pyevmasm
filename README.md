@@ -79,6 +79,6 @@ python setup.py install
 ```
 
 ## Documentation
-[insert RTD link here]()
+[https://pyevmasm.readthedocs.io](https://pyevmasm.readthedocs.io)
 
 New issues, feature requests, and contributions are welcome. Join us in #ethereum channel on the [Empire Hacking Slack](https://empireslacking.herokuapp.com) to discuss Ethereum security tool development.
