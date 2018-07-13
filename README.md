@@ -2,12 +2,7 @@
 
 pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machine (EVM).
 
-This library is currently new and under development.
-
-New issues, feature requests, and contributions are welcome. Join us in #ethereum channel on the [Empire Hacking Slack](https://empireslacking.herokuapp.com) to discuss Ethereum security tool development.
-
-
-Examples;
+## Examples
 ```
 >>> from pyevmasm import instruction_table, disassemble_hex, disassemble_all, assemble_hex
 >>> instruction_table[20]
@@ -29,8 +24,8 @@ MSTORE
 '0x604052'
 ```
 
-# evmasm
-evmasm is a commandline utility that uses pyevmasm to assemble or disassemble EVM.
+## evmasm
+`evmasm` is a commandline utility that uses pyevmasm to assemble or disassemble EVM.
 
 ```
 usage: evmasm [-h] (-a | -d | -t) [-bi] [-bo] [-i [INPUT]] [-o [OUTPUT]]
@@ -66,10 +61,10 @@ $ echo -n "608060405260043610603f57600035" | evmasm -d
 0000000c: PUSH1 0x0
 0000000e: CALLDATALOAD
 ```
-### Requirements
-Python >=2.7 or Python >=3.3
 
 # Installation
+
+Python >=2.7 or Python >=3.3 is required.
 
 Install the latest stable version using pip:
 ```
@@ -83,5 +78,7 @@ cd pyevmasm
 python setup.py install
 ```
 
-# Documentation
+## Documentation
 [insert RTD link here]()
+
+New issues, feature requests, and contributions are welcome. Join us in #ethereum channel on the [Empire Hacking Slack](https://empireslacking.herokuapp.com) to discuss Ethereum security tool development.
