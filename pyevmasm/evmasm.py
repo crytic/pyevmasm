@@ -586,7 +586,6 @@ def assemble_all(asmcode, pc=0):
                             ''')
 
     """
-
     asmcode = asmcode.split('\n')
     asmcode = iter(asmcode)
     for line in asmcode:
@@ -618,7 +617,10 @@ def disassemble_one(bytecode, pc=0):
         bytecode = bytearray(bytecode.encode('latin-1'))
 
     bytecode = iter(bytecode)
-    opcode = next(bytecode)
+    try:
+        opcode = next(bytecode)
+    except StopIteration:
+        return
 
     assert isinstance(opcode, int)
 
@@ -669,6 +671,8 @@ def disassemble_all(bytecode, pc=0):
     bytecode = iter(bytecode)
     while True:
         instr = disassemble_one(bytecode, pc=pc)
+        if not instr:
+            return
         pc += instr.size
         yield instr
 
@@ -751,7 +755,7 @@ def assemble_hex(asmcode, pc=0):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
-        :type asmcode: str
+        :type asmcode: str | iterator[Instruction]
         :param pc: program counter of the first instruction(optional)
         :type pc: int
         :return: the hex representation of the bytecode
@@ -768,4 +772,6 @@ def assemble_hex(asmcode, pc=0):
             ...
             "0x6060604052600261010"
     """
+    if isinstance(asmcode, list):
+        return '0x' + hexlify(b''.join([x.bytes for x in asmcode])).decode('ascii')
     return '0x' + hexlify(assemble(asmcode, pc=pc)).decode('ascii')
