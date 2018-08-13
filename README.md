@@ -1,6 +1,6 @@
-# PyEVMAsm
+# pyevmasm
 
-PyEVMAsm is an assembler and disassembler library for the Ethereum Virtual Machine (EVM). It includes a commandline utility and a Python API.
+pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machine (EVM). It includes a commandline utility and a Python API.
 
 ## CLI Examples with evmasm
 
