@@ -49,7 +49,7 @@ def main():
             except KeyboardInterrupt:
                 sys.exit(0)
             except UnicodeDecodeError:
-                print('Input is binary? try using -b.')
+                print('Input is binary? try using -bi.')
                 sys.exit(1)
 
             if buf[:3] == 'EVM':  # binja prefix
