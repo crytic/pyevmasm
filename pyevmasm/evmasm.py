@@ -596,13 +596,15 @@ def assemble_all(asmcode, pc=0):
         pc += instr.size
 
 
-def disassemble_one(bytecode, pc=0):
+def disassemble_one(bytecode, pc=0, silent=False):
     """ Disassemble a single instruction from a bytecode
 
         :param bytecode: the bytecode stream
         :type bytecode: str | bytes | bytearray | iterator
         :param pc: program counter of the instruction(optional)
         :type pc: int
+        :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
+        :type silent: bool
         :return: an Instruction object
         :rtype: Instruction
 
@@ -624,8 +626,16 @@ def disassemble_one(bytecode, pc=0):
 
     assert isinstance(opcode, int)
 
-    instruction = instruction_table[opcode]
+
+    if silent:
+        if opcode not in instruction_table:
+            instruction = copy(instruction_table[opcode])
+    instruction = copy(instruction_table[opcode])
     instruction.pc = pc
+
+    if silent:
+        from itertools import chain, repeat
+        bytecode = chain(bytecode, repeat(0))
 
     if instruction.has_operand:
         instruction.parse_operand(bytecode)
@@ -633,13 +643,15 @@ def disassemble_one(bytecode, pc=0):
     return instruction
 
 
-def disassemble_all(bytecode, pc=0):
+def disassemble_all(bytecode, pc=0, silent=False):
     """ Disassemble all instructions in bytecode
 
         :param bytecode: an evm bytecode (binary)
         :type bytecode: str | bytes | bytearray | iterator
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
+        :type silent: bool
         :return: An generator of Instruction objects
         :rtype: list[Instruction]
 
@@ -670,19 +682,21 @@ def disassemble_all(bytecode, pc=0):
 
     bytecode = iter(bytecode)
     while True:
-        instr = disassemble_one(bytecode, pc=pc)
+        instr = disassemble_one(bytecode, pc=pc, silent=silent)
         if not instr:
             return
         pc += instr.size
         yield instr
 
 
-def disassemble(bytecode, pc=0):
+def disassemble(bytecode, pc=0, silent=False):
     """ Disassemble an EVM bytecode
 
         :param bytecode: binary representation of an evm bytecode
         :type bytecode: str | bytes | bytearray
         :param pc: program counter of the first instruction(optional)
+        :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
+        :type silent: bool
         :type pc: int
         :return: the text representation of the assembler code
 
@@ -697,7 +711,7 @@ def disassemble(bytecode, pc=0):
             PUSH2 0x100
 
     """
-    return '\n'.join(map(str, disassemble_all(bytecode, pc=pc)))
+    return '\n'.join(map(str, disassemble_all(bytecode, pc=pc, silent=silent)))
 
 
 def assemble(asmcode, pc=0):
