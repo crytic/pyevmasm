@@ -1,6 +1,7 @@
 from binascii import hexlify, unhexlify
 from builtins import map, next, range, object
 from future.builtins import next, bytes
+from copy imports copy
 
 """
     Example use::
