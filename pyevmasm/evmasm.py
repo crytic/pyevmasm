@@ -627,11 +627,14 @@ def disassemble_one(bytecode, pc=0, silent=False):
 
     assert isinstance(opcode, int)
 
+    try:
+        instruction = copy(instruction_table[opcode])
+    except KeyError:
+        if silent:
+            instruction = copy(instruction_table[0xfe])
+        else:
+            raise
 
-    if silent:
-        if opcode not in instruction_table:
-            instruction = copy(instruction_table[opcode])
-    instruction = copy(instruction_table[opcode])
     instruction.pc = pc
 
     if silent:
