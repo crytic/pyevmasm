@@ -35,6 +35,12 @@ class UnknownMnemonicError(Exception):
 class UnknownOpcodeError(Exception):
     pass
 
+class AssembleError(Exception):
+    pass
+
+class ParseError(Exception):
+    pass
+
 
 class InstructionTable(dict):
     """
@@ -365,7 +371,7 @@ class Instruction(object):
                 operand |= next(buf)
             self._operand = operand
         except StopIteration:
-            raise Exception("Not enough data for decoding")
+            raise ParseError("Not enough data for decoding")
 
     @property
     def operand_size(self):
@@ -557,8 +563,8 @@ def assemble_one(asmcode, pc=0):
             assert len(asmcode) == 2
             instr.operand = int(asmcode[1], 0)
         return instr
-    except BaseException:
-        raise Exception("Something wrong at pc %d" % pc)
+    except:
+        raise AssembleError("Something wrong at pc %d" % pc)
 
 
 def assemble_all(asmcode, pc=0):
@@ -627,10 +633,13 @@ def disassemble_one(bytecode, pc=0):
     instruction = instruction_table[opcode]
     instruction.pc = pc
 
-    if instruction.has_operand:
-        instruction.parse_operand(bytecode)
-
-    return instruction
+    try:
+        if instruction.has_operand:
+            instruction.parse_operand(bytecode)
+    except ParseError:
+        instruction = None
+    finally:
+        return instruction
 
 
 def disassemble_all(bytecode, pc=0):
