@@ -14,6 +14,8 @@ def main():
     group_action.add_argument('-t', '--print-opcode-table', action='store_true', help='List supported EVM opcodes')
     parser.add_argument('-bi', '--binary-input', action='store_true', help='Binary input mode (-d only)')
     parser.add_argument('-bo', '--binary-output', action='store_true', help='Binary output mode (-a only)')
+    parser.add_argument('-N', '--no-offsets', action='store_true', help='Do not print the file offset of the current instruction (-d only)')
+    parser.add_argument('-S', '--no-swarmhash', action='store_true', help='Convert swarm hash to STOP opcodes')
     parser.add_argument('-i', '--input', nargs='?', default=sys.stdin, type=argparse.FileType('r'),
                         help='Input file, default=stdin')
     parser.add_argument('-o', '--output', nargs='?', default=sys.stdout, type=argparse.FileType('w'),
@@ -65,10 +67,24 @@ def main():
                 if buf_set <= hex_set:  # subset
                     buf = binascii.unhexlify(buf)
 
+        # replace all swarm hashes with \x00
+        if args.no_swarmhash:
+            while True: #detect multiple swarm hashes, about 700 contracts do
+               if '\xa1ebzzr0X ' in buf:
+               # replace the swarm hash with stops
+                   offset = buf.find('\xa1ebzzr0X ')
+                   buf = buf[:offset] + b'\x00' * 43 + buf[offset+43:]
+               else:
+                   break
+
         insns = list(disassemble_all(buf))
         for i in insns:
-            args.output.write("%08x: %s\n" % (i.pc, str(i)))
+            if args.no_offsets:
+                args.output.write("%s\n" % (str(i),))
+            else:
+                args.output.write("%08x: %s\n" % (i.pc, str(i)))
 
 
+        print("done")
 if __name__ == "__main__":
     main()
