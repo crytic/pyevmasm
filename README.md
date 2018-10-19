@@ -77,7 +77,7 @@ Or, install the library from source:
 ```
 git clone https://github.com/trailofbits/pyevmasm
 cd pyevmasm
-python setup.py install
+python setup.py install --user
 ```
 
 ## Documentation

@@ -36,6 +36,12 @@ class UnknownMnemonicError(Exception):
 class UnknownOpcodeError(Exception):
     pass
 
+class AssembleError(Exception):
+    pass
+
+class ParseError(Exception):
+    pass
+
 
 class InstructionTable(dict):
     """
@@ -366,7 +372,7 @@ class Instruction(object):
                 operand |= next(buf)
             self._operand = operand
         except StopIteration:
-            raise Exception("Not enough data for decoding")
+            raise ParseError("Not enough data for decoding")
 
     @property
     def operand_size(self):
@@ -558,8 +564,8 @@ def assemble_one(asmcode, pc=0):
             assert len(asmcode) == 2
             instr.operand = int(asmcode[1], 0)
         return instr
-    except BaseException:
-        raise Exception("Something wrong at pc %d" % pc)
+    except:
+        raise AssembleError("Something wrong at pc %d" % pc)
 
 
 def assemble_all(asmcode, pc=0):
@@ -631,20 +637,24 @@ def disassemble_one(bytecode, pc=0, silent=False):
         instruction = copy(instruction_table[opcode])
     except KeyError:
         if silent:
-            instruction = copy(instruction_table[0xfe])
+            instruction = copy(instruction_table[0xfe]) #INVALID
         else:
             raise
 
     instruction.pc = pc
 
-    if silent:
-        from itertools import chain, repeat
-        bytecode = chain(bytecode, repeat(0))
+    try:
+        if instruction.has_operand:
+            # comlete intruction operand with zeroes
+            if silent:
+                from itertools import chain, repeat
+                bytecode = chain(bytecode, repeat(0)
 
-    if instruction.has_operand:
-        instruction.parse_operand(bytecode)
-
-    return instruction
+            instruction.parse_operand(bytecode)
+    except ParseError:
+        instruction = None
+    finally:
+        return instruction
 
 
 def disassemble_all(bytecode, pc=0, silent=False):
@@ -659,7 +669,6 @@ def disassemble_all(bytecode, pc=0, silent=False):
         :return: An generator of Instruction objects
         :rtype: list[Instruction]
 
-        Example use::
 
             >>> for inst in disassemble_all(bytecode):
             ...    print(instr)
@@ -688,7 +697,7 @@ def disassemble_all(bytecode, pc=0, silent=False):
     while True:
         instr = disassemble_one(bytecode, pc=pc, silent=silent)
         if not instr:
-            return
+            raise StopIteration
         pc += instr.size
         yield instr
 
