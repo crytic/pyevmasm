@@ -681,7 +681,7 @@ def disassemble_all(bytecode, pc=0):
     while True:
         instr = disassemble_one(bytecode, pc=pc)
         if not instr:
-            raise StopIteration
+            return
         pc += instr.size
         yield instr
 
