@@ -1,7 +1,10 @@
+from bisect import bisect
 from binascii import hexlify, unhexlify
 from builtins import map, next, range, object
 from future.builtins import next, bytes
-from copy imports copy
+from copy import copy
+
+DEFAULT_FORK = "byzantium"
 
 """
     Example use::
@@ -25,7 +28,7 @@ from copy imports copy
         '0x606040526002610100'
         >>> disassemble_hex('0x606040526002610100')
         'PUSH1 0x60\\nBLOCKHASH\\nMSTORE\\nPUSH1 0x2\\nPUSH2 0x100'
-        
+
 """
 
 
@@ -36,8 +39,10 @@ class UnknownMnemonicError(Exception):
 class UnknownOpcodeError(Exception):
     pass
 
+
 class AssembleError(Exception):
     pass
+
 
 class ParseError(Exception):
     pass
@@ -50,7 +55,8 @@ class InstructionTable(dict):
 
     Example::
 
-        >>> from pyevmasm import instruction_table
+        >>> from pyevmasm import instruction_tables
+        >>> instruction_table = instruction_tables['byzantium']
         >>> instruction_table[0]
         Instruction(0x0, 'STOP', 0, 0, 0, 0, 'Halts execution.', None, 0)
         >>> instruction_table['STOP']
@@ -123,8 +129,145 @@ class InstructionTable(dict):
 
 
 # from http://gavwood.com/paper.pdf
-instruction_table = InstructionTable({
-    # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
+instruction_tables = {
+    "pre-byzantium": InstructionTable({
+        # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
+        0x00: ('STOP', 0, 0, 0, 0, 'Halts execution.'),
+        0x01: ('ADD', 0, 2, 1, 3, 'Addition operation.'),
+        0x02: ('MUL', 0, 2, 1, 5, 'Multiplication operation.'),
+        0x03: ('SUB', 0, 2, 1, 3, 'Subtraction operation.'),
+        0x04: ('DIV', 0, 2, 1, 5, 'Integer division operation.'),
+        0x05: ('SDIV', 0, 2, 1, 5, 'Signed integer division operation (truncated).'),
+        0x06: ('MOD', 0, 2, 1, 5, 'Modulo remainder operation.'),
+        0x07: ('SMOD', 0, 2, 1, 5, 'Signed modulo remainder operation.'),
+        0x08: ('ADDMOD', 0, 3, 1, 8, 'Modulo addition operation.'),
+        0x09: ('MULMOD', 0, 3, 1, 8, 'Modulo multiplication operation.'),
+        0x0a: ('EXP', 0, 2, 1, 10, 'Exponential operation.'),
+        0x0b: ('SIGNEXTEND', 0, 2, 1, 5, "Extend length of two's complement signed integer."),
+        0x10: ('LT', 0, 2, 1, 3, 'Less-than comparision.'),
+        0x11: ('GT', 0, 2, 1, 3, 'Greater-than comparision.'),
+        0x12: ('SLT', 0, 2, 1, 3, 'Signed less-than comparision.'),
+        0x13: ('SGT', 0, 2, 1, 3, 'Signed greater-than comparision.'),
+        0x14: ('EQ', 0, 2, 1, 3, 'Equality comparision.'),
+        0x15: ('ISZERO', 0, 1, 1, 3, 'Simple not operator.'),
+        0x16: ('AND', 0, 2, 1, 3, 'Bitwise AND operation.'),
+        0x17: ('OR', 0, 2, 1, 3, 'Bitwise OR operation.'),
+        0x18: ('XOR', 0, 2, 1, 3, 'Bitwise XOR operation.'),
+        0x19: ('NOT', 0, 1, 1, 3, 'Bitwise NOT operation.'),
+        0x1a: ('BYTE', 0, 2, 1, 3, 'Retrieve single byte from word.'),
+        0x20: ('SHA3', 0, 2, 1, 30, 'Compute Keccak-256 hash.'),
+        0x30: ('ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.'),
+        0x31: ('BALANCE', 0, 1, 1, 20, 'Get balance of the given account.'),
+        0x32: ('ORIGIN', 0, 0, 1, 2, 'Get execution origination address.'),
+        0x33: ('CALLER', 0, 0, 1, 2, 'Get caller address.'),
+        0x34: ('CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
+        0x35: ('CALLDATALOAD', 0, 1, 1, 3, 'Get input data of current environment.'),
+        0x36: ('CALLDATASIZE', 0, 0, 1, 2, 'Get size of input data in current environment.'),
+        0x37: ('CALLDATACOPY', 0, 3, 0, 3, 'Copy input data in current environment to memory.'),
+        0x38: ('CODESIZE', 0, 0, 1, 2, 'Get size of code running in current environment.'),
+        0x39: ('CODECOPY', 0, 3, 0, 3, 'Copy code running in current environment to memory.'),
+        0x3a: ('GASPRICE', 0, 0, 1, 2, 'Get price of gas in current environment.'),
+        0x3b: ('EXTCODESIZE', 0, 1, 1, 20, "Get size of an account's code."),
+        0x3c: ('EXTCODECOPY', 0, 4, 0, 20, "Copy an account's code to memory."),
+        0x3d: ('RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment.'),
+        0x3e: ('RETURNDATACOPY', 0, 3, 0, 3, 'Copy output data from the previous call to memory.'),
+        0x40: ('BLOCKHASH', 0, 1, 1, 20, 'Get the hash of one of the 256 most recent complete blocks.'),
+        0x41: ('COINBASE', 0, 0, 1, 2, "Get the block's beneficiary address."),
+        0x42: ('TIMESTAMP', 0, 0, 1, 2, "Get the block's timestamp."),
+        0x43: ('NUMBER', 0, 0, 1, 2, "Get the block's number."),
+        0x44: ('DIFFICULTY', 0, 0, 1, 2, "Get the block's difficulty."),
+        0x45: ('GASLIMIT', 0, 0, 1, 2, "Get the block's gas limit."),
+        0x50: ('POP', 0, 1, 0, 2, 'Remove item from stack.'),
+        0x51: ('MLOAD', 0, 1, 1, 3, 'Load word from memory.'),
+        0x52: ('MSTORE', 0, 2, 0, 3, 'Save word to memory.'),
+        0x53: ('MSTORE8', 0, 2, 0, 3, 'Save byte to memory.'),
+        0x54: ('SLOAD', 0, 1, 1, 50, 'Load word from storage.'),
+        0x55: ('SSTORE', 0, 2, 0, 0, 'Save word to storage.'),
+        0x56: ('JUMP', 0, 1, 0, 8, 'Alter the program counter.'),
+        0x57: ('JUMPI', 0, 2, 0, 10, 'Conditionally alter the program counter.'),
+        0x58: ('GETPC', 0, 0, 1, 2, 'Get the value of the program counter prior to the increment.'),
+        0x59: ('MSIZE', 0, 0, 1, 2, 'Get the size of active memory in bytes.'),
+        0x5a: ('GAS', 0, 0, 1, 2, 'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
+        0x5b: ('JUMPDEST', 0, 0, 0, 1, 'Mark a valid destination for jumps.'),
+        0x60: ('PUSH', 1, 0, 1, 3, 'Place 1 byte item on stack.'),
+        0x61: ('PUSH', 2, 0, 1, 3, 'Place 2-byte item on stack.'),
+        0x62: ('PUSH', 3, 0, 1, 3, 'Place 3-byte item on stack.'),
+        0x63: ('PUSH', 4, 0, 1, 3, 'Place 4-byte item on stack.'),
+        0x64: ('PUSH', 5, 0, 1, 3, 'Place 5-byte item on stack.'),
+        0x65: ('PUSH', 6, 0, 1, 3, 'Place 6-byte item on stack.'),
+        0x66: ('PUSH', 7, 0, 1, 3, 'Place 7-byte item on stack.'),
+        0x67: ('PUSH', 8, 0, 1, 3, 'Place 8-byte item on stack.'),
+        0x68: ('PUSH', 9, 0, 1, 3, 'Place 9-byte item on stack.'),
+        0x69: ('PUSH', 10, 0, 1, 3, 'Place 10-byte item on stack.'),
+        0x6a: ('PUSH', 11, 0, 1, 3, 'Place 11-byte item on stack.'),
+        0x6b: ('PUSH', 12, 0, 1, 3, 'Place 12-byte item on stack.'),
+        0x6c: ('PUSH', 13, 0, 1, 3, 'Place 13-byte item on stack.'),
+        0x6d: ('PUSH', 14, 0, 1, 3, 'Place 14-byte item on stack.'),
+        0x6e: ('PUSH', 15, 0, 1, 3, 'Place 15-byte item on stack.'),
+        0x6f: ('PUSH', 16, 0, 1, 3, 'Place 16-byte item on stack.'),
+        0x70: ('PUSH', 17, 0, 1, 3, 'Place 17-byte item on stack.'),
+        0x71: ('PUSH', 18, 0, 1, 3, 'Place 18-byte item on stack.'),
+        0x72: ('PUSH', 19, 0, 1, 3, 'Place 19-byte item on stack.'),
+        0x73: ('PUSH', 20, 0, 1, 3, 'Place 20-byte item on stack.'),
+        0x74: ('PUSH', 21, 0, 1, 3, 'Place 21-byte item on stack.'),
+        0x75: ('PUSH', 22, 0, 1, 3, 'Place 22-byte item on stack.'),
+        0x76: ('PUSH', 23, 0, 1, 3, 'Place 23-byte item on stack.'),
+        0x77: ('PUSH', 24, 0, 1, 3, 'Place 24-byte item on stack.'),
+        0x78: ('PUSH', 25, 0, 1, 3, 'Place 25-byte item on stack.'),
+        0x79: ('PUSH', 26, 0, 1, 3, 'Place 26-byte item on stack.'),
+        0x7a: ('PUSH', 27, 0, 1, 3, 'Place 27-byte item on stack.'),
+        0x7b: ('PUSH', 28, 0, 1, 3, 'Place 28-byte item on stack.'),
+        0x7c: ('PUSH', 29, 0, 1, 3, 'Place 29-byte item on stack.'),
+        0x7d: ('PUSH', 30, 0, 1, 3, 'Place 30-byte item on stack.'),
+        0x7e: ('PUSH', 31, 0, 1, 3, 'Place 31-byte item on stack.'),
+        0x7f: ('PUSH', 32, 0, 1, 3, 'Place 32-byte (full word) item on stack.'),
+        0x80: ('DUP', 0, 1, 2, 3, 'Duplicate 1st stack item.'),
+        0x81: ('DUP', 0, 2, 3, 3, 'Duplicate 2nd stack item.'),
+        0x82: ('DUP', 0, 3, 4, 3, 'Duplicate 3rd stack item.'),
+        0x83: ('DUP', 0, 4, 5, 3, 'Duplicate 4th stack item.'),
+        0x84: ('DUP', 0, 5, 6, 3, 'Duplicate 5th stack item.'),
+        0x85: ('DUP', 0, 6, 7, 3, 'Duplicate 6th stack item.'),
+        0x86: ('DUP', 0, 7, 8, 3, 'Duplicate 7th stack item.'),
+        0x87: ('DUP', 0, 8, 9, 3, 'Duplicate 8th stack item.'),
+        0x88: ('DUP', 0, 9, 10, 3, 'Duplicate 9th stack item.'),
+        0x89: ('DUP', 0, 10, 11, 3, 'Duplicate 10th stack item.'),
+        0x8a: ('DUP', 0, 11, 12, 3, 'Duplicate 11th stack item.'),
+        0x8b: ('DUP', 0, 12, 13, 3, 'Duplicate 12th stack item.'),
+        0x8c: ('DUP', 0, 13, 14, 3, 'Duplicate 13th stack item.'),
+        0x8d: ('DUP', 0, 14, 15, 3, 'Duplicate 14th stack item.'),
+        0x8e: ('DUP', 0, 15, 16, 3, 'Duplicate 15th stack item.'),
+        0x8f: ('DUP', 0, 16, 17, 3, 'Duplicate 16th stack item.'),
+        0x90: ('SWAP', 0, 2, 2, 3, 'Exchange 1st and 2nd stack items.'),
+        0x91: ('SWAP', 0, 3, 3, 3, 'Exchange 1st and 3rd stack items.'),
+        0x92: ('SWAP', 0, 4, 4, 3, 'Exchange 1st and 4th stack items.'),
+        0x93: ('SWAP', 0, 5, 5, 3, 'Exchange 1st and 5th stack items.'),
+        0x94: ('SWAP', 0, 6, 6, 3, 'Exchange 1st and 6th stack items.'),
+        0x95: ('SWAP', 0, 7, 7, 3, 'Exchange 1st and 7th stack items.'),
+        0x96: ('SWAP', 0, 8, 8, 3, 'Exchange 1st and 8th stack items.'),
+        0x97: ('SWAP', 0, 9, 9, 3, 'Exchange 1st and 9th stack items.'),
+        0x98: ('SWAP', 0, 10, 10, 3, 'Exchange 1st and 10th stack items.'),
+        0x99: ('SWAP', 0, 11, 11, 3, 'Exchange 1st and 11th stack items.'),
+        0x9a: ('SWAP', 0, 12, 12, 3, 'Exchange 1st and 12th stack items.'),
+        0x9b: ('SWAP', 0, 13, 13, 3, 'Exchange 1st and 13th stack items.'),
+        0x9c: ('SWAP', 0, 14, 14, 3, 'Exchange 1st and 14th stack items.'),
+        0x9d: ('SWAP', 0, 15, 15, 3, 'Exchange 1st and 15th stack items.'),
+        0x9e: ('SWAP', 0, 16, 16, 3, 'Exchange 1st and 16th stack items.'),
+        0x9f: ('SWAP', 0, 17, 17, 3, 'Exchange 1st and 17th stack items.'),
+        0xa0: ('LOG', 0, 2, 0, 375, 'Append log record with no topics.'),
+        0xa1: ('LOG', 0, 3, 0, 750, 'Append log record with one topic.'),
+        0xa2: ('LOG', 0, 4, 0, 1125, 'Append log record with two topics.'),
+        0xa3: ('LOG', 0, 5, 0, 1500, 'Append log record with three topics.'),
+        0xa4: ('LOG', 0, 6, 0, 1875, 'Append log record with four topics.'),
+        0xf0: ('CREATE', 0, 3, 1, 32000, 'Create a new account with associated code.'),
+        0xf1: ('CALL', 0, 7, 1, 40, 'Message-call into an account.'),
+        0xf2: ('CALLCODE', 0, 7, 1, 40, "Message-call into this account with alternative account's code."),
+        0xf3: ('RETURN', 0, 2, 0, 0, 'Halt execution returning output data.'),
+        0xf4: ('DELEGATECALL', 0, 6, 1, 40, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
+        0xfe: ('INVALID', 0, 0, 0, 0, 'Designated invalid instruction.'),
+        0xff: ('SELFDESTRUCT', 0, 1, 0, 5000, 'Halt execution and register account for later deletion.')
+    }),
+    "byzantium": InstructionTable({
+        # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
         0x00: ('STOP', 0, 0, 0, 0, 'Halts execution.'),
         0x01: ('ADD', 0, 2, 1, 3, 'Addition operation.'),
         0x02: ('MUL', 0, 2, 1, 5, 'Multiplication operation.'),
@@ -260,7 +403,151 @@ instruction_table = InstructionTable({
         0xfd: ('REVERT', 0, 2, 0, 0, 'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
         0xfe: ('INVALID', 0, 0, 0, 0, 'Designated invalid instruction.'),
         0xff: ('SELFDESTRUCT', 0, 1, 0, 5000, 'Halt execution and register account for later deletion.')
+    }),
+    "constantinople": InstructionTable({
+        # opcode: (name, immediate_operand_size, pops, pushes, gas, description)
+        0x00: ('STOP', 0, 0, 0, 0, 'Halts execution.'),
+        0x01: ('ADD', 0, 2, 1, 3, 'Addition operation.'),
+        0x02: ('MUL', 0, 2, 1, 5, 'Multiplication operation.'),
+        0x03: ('SUB', 0, 2, 1, 3, 'Subtraction operation.'),
+        0x04: ('DIV', 0, 2, 1, 5, 'Integer division operation.'),
+        0x05: ('SDIV', 0, 2, 1, 5, 'Signed integer division operation (truncated).'),
+        0x06: ('MOD', 0, 2, 1, 5, 'Modulo remainder operation.'),
+        0x07: ('SMOD', 0, 2, 1, 5, 'Signed modulo remainder operation.'),
+        0x08: ('ADDMOD', 0, 3, 1, 8, 'Modulo addition operation.'),
+        0x09: ('MULMOD', 0, 3, 1, 8, 'Modulo multiplication operation.'),
+        0x0a: ('EXP', 0, 2, 1, 10, 'Exponential operation.'),
+        0x0b: ('SIGNEXTEND', 0, 2, 1, 5, "Extend length of two's complement signed integer."),
+        0x10: ('LT', 0, 2, 1, 3, 'Less-than comparision.'),
+        0x11: ('GT', 0, 2, 1, 3, 'Greater-than comparision.'),
+        0x12: ('SLT', 0, 2, 1, 3, 'Signed less-than comparision.'),
+        0x13: ('SGT', 0, 2, 1, 3, 'Signed greater-than comparision.'),
+        0x14: ('EQ', 0, 2, 1, 3, 'Equality comparision.'),
+        0x15: ('ISZERO', 0, 1, 1, 3, 'Simple not operator.'),
+        0x16: ('AND', 0, 2, 1, 3, 'Bitwise AND operation.'),
+        0x17: ('OR', 0, 2, 1, 3, 'Bitwise OR operation.'),
+        0x18: ('XOR', 0, 2, 1, 3, 'Bitwise XOR operation.'),
+        0x19: ('NOT', 0, 1, 1, 3, 'Bitwise NOT operation.'),
+        0x1a: ('BYTE', 0, 2, 1, 3, 'Retrieve single byte from word.'),
+        0x1b: ('SHL', 0, 2, 1, 3, 'Logical left shift.'),
+        0x1c: ('SHR', 0, 2, 1, 3, 'Logical right shift.'),
+        0x1d: ('SAR', 0, 2, 1, 3, 'Arithmetic right shift.'),
+        0x20: ('SHA3', 0, 2, 1, 30, 'Compute Keccak-256 hash.'),
+        0x30: ('ADDRESS', 0, 0, 1, 2, 'Get address of currently executing account.'),
+        0x31: ('BALANCE', 0, 1, 1, 20, 'Get balance of the given account.'),
+        0x32: ('ORIGIN', 0, 0, 1, 2, 'Get execution origination address.'),
+        0x33: ('CALLER', 0, 0, 1, 2, 'Get caller address.'),
+        0x34: ('CALLVALUE', 0, 0, 1, 2, 'Get deposited value by the instruction/transaction responsible for this execution.'),
+        0x35: ('CALLDATALOAD', 0, 1, 1, 3, 'Get input data of current environment.'),
+        0x36: ('CALLDATASIZE', 0, 0, 1, 2, 'Get size of input data in current environment.'),
+        0x37: ('CALLDATACOPY', 0, 3, 0, 3, 'Copy input data in current environment to memory.'),
+        0x38: ('CODESIZE', 0, 0, 1, 2, 'Get size of code running in current environment.'),
+        0x39: ('CODECOPY', 0, 3, 0, 3, 'Copy code running in current environment to memory.'),
+        0x3a: ('GASPRICE', 0, 0, 1, 2, 'Get price of gas in current environment.'),
+        0x3b: ('EXTCODESIZE', 0, 1, 1, 20, "Get size of an account's code."),
+        0x3c: ('EXTCODECOPY', 0, 4, 0, 20, "Copy an account's code to memory."),
+        0x3d: ('RETURNDATASIZE', 0, 0, 1, 2, 'Get size of output data from the previous call from the current environment.'),
+        0x3e: ('RETURNDATACOPY', 0, 3, 0, 3, 'Copy output data from the previous call to memory.'),
+        0x3f: ('EXTCODEHASH', 0, 1, 1, 400, "Get the keccak256 hash of contract's byte code."),
+        0x40: ('BLOCKHASH', 0, 1, 1, 20, 'Get the hash of one of the 256 most recent complete blocks.'),
+        0x41: ('COINBASE', 0, 0, 1, 2, "Get the block's beneficiary address."),
+        0x42: ('TIMESTAMP', 0, 0, 1, 2, "Get the block's timestamp."),
+        0x43: ('NUMBER', 0, 0, 1, 2, "Get the block's number."),
+        0x44: ('DIFFICULTY', 0, 0, 1, 2, "Get the block's difficulty."),
+        0x45: ('GASLIMIT', 0, 0, 1, 2, "Get the block's gas limit."),
+        0x50: ('POP', 0, 1, 0, 2, 'Remove item from stack.'),
+        0x51: ('MLOAD', 0, 1, 1, 3, 'Load word from memory.'),
+        0x52: ('MSTORE', 0, 2, 0, 3, 'Save word to memory.'),
+        0x53: ('MSTORE8', 0, 2, 0, 3, 'Save byte to memory.'),
+        0x54: ('SLOAD', 0, 1, 1, 50, 'Load word from storage.'),
+        0x55: ('SSTORE', 0, 2, 0, 0, 'Save word to storage.'),
+        0x56: ('JUMP', 0, 1, 0, 8, 'Alter the program counter.'),
+        0x57: ('JUMPI', 0, 2, 0, 10, 'Conditionally alter the program counter.'),
+        0x58: ('GETPC', 0, 0, 1, 2, 'Get the value of the program counter prior to the increment.'),
+        0x59: ('MSIZE', 0, 0, 1, 2, 'Get the size of active memory in bytes.'),
+        0x5a: ('GAS', 0, 0, 1, 2, 'Get the amount of available gas, including the corresponding reduction the amount of available gas.'),
+        0x5b: ('JUMPDEST', 0, 0, 0, 1, 'Mark a valid destination for jumps.'),
+        0x60: ('PUSH', 1, 0, 1, 3, 'Place 1 byte item on stack.'),
+        0x61: ('PUSH', 2, 0, 1, 3, 'Place 2-byte item on stack.'),
+        0x62: ('PUSH', 3, 0, 1, 3, 'Place 3-byte item on stack.'),
+        0x63: ('PUSH', 4, 0, 1, 3, 'Place 4-byte item on stack.'),
+        0x64: ('PUSH', 5, 0, 1, 3, 'Place 5-byte item on stack.'),
+        0x65: ('PUSH', 6, 0, 1, 3, 'Place 6-byte item on stack.'),
+        0x66: ('PUSH', 7, 0, 1, 3, 'Place 7-byte item on stack.'),
+        0x67: ('PUSH', 8, 0, 1, 3, 'Place 8-byte item on stack.'),
+        0x68: ('PUSH', 9, 0, 1, 3, 'Place 9-byte item on stack.'),
+        0x69: ('PUSH', 10, 0, 1, 3, 'Place 10-byte item on stack.'),
+        0x6a: ('PUSH', 11, 0, 1, 3, 'Place 11-byte item on stack.'),
+        0x6b: ('PUSH', 12, 0, 1, 3, 'Place 12-byte item on stack.'),
+        0x6c: ('PUSH', 13, 0, 1, 3, 'Place 13-byte item on stack.'),
+        0x6d: ('PUSH', 14, 0, 1, 3, 'Place 14-byte item on stack.'),
+        0x6e: ('PUSH', 15, 0, 1, 3, 'Place 15-byte item on stack.'),
+        0x6f: ('PUSH', 16, 0, 1, 3, 'Place 16-byte item on stack.'),
+        0x70: ('PUSH', 17, 0, 1, 3, 'Place 17-byte item on stack.'),
+        0x71: ('PUSH', 18, 0, 1, 3, 'Place 18-byte item on stack.'),
+        0x72: ('PUSH', 19, 0, 1, 3, 'Place 19-byte item on stack.'),
+        0x73: ('PUSH', 20, 0, 1, 3, 'Place 20-byte item on stack.'),
+        0x74: ('PUSH', 21, 0, 1, 3, 'Place 21-byte item on stack.'),
+        0x75: ('PUSH', 22, 0, 1, 3, 'Place 22-byte item on stack.'),
+        0x76: ('PUSH', 23, 0, 1, 3, 'Place 23-byte item on stack.'),
+        0x77: ('PUSH', 24, 0, 1, 3, 'Place 24-byte item on stack.'),
+        0x78: ('PUSH', 25, 0, 1, 3, 'Place 25-byte item on stack.'),
+        0x79: ('PUSH', 26, 0, 1, 3, 'Place 26-byte item on stack.'),
+        0x7a: ('PUSH', 27, 0, 1, 3, 'Place 27-byte item on stack.'),
+        0x7b: ('PUSH', 28, 0, 1, 3, 'Place 28-byte item on stack.'),
+        0x7c: ('PUSH', 29, 0, 1, 3, 'Place 29-byte item on stack.'),
+        0x7d: ('PUSH', 30, 0, 1, 3, 'Place 30-byte item on stack.'),
+        0x7e: ('PUSH', 31, 0, 1, 3, 'Place 31-byte item on stack.'),
+        0x7f: ('PUSH', 32, 0, 1, 3, 'Place 32-byte (full word) item on stack.'),
+        0x80: ('DUP', 0, 1, 2, 3, 'Duplicate 1st stack item.'),
+        0x81: ('DUP', 0, 2, 3, 3, 'Duplicate 2nd stack item.'),
+        0x82: ('DUP', 0, 3, 4, 3, 'Duplicate 3rd stack item.'),
+        0x83: ('DUP', 0, 4, 5, 3, 'Duplicate 4th stack item.'),
+        0x84: ('DUP', 0, 5, 6, 3, 'Duplicate 5th stack item.'),
+        0x85: ('DUP', 0, 6, 7, 3, 'Duplicate 6th stack item.'),
+        0x86: ('DUP', 0, 7, 8, 3, 'Duplicate 7th stack item.'),
+        0x87: ('DUP', 0, 8, 9, 3, 'Duplicate 8th stack item.'),
+        0x88: ('DUP', 0, 9, 10, 3, 'Duplicate 9th stack item.'),
+        0x89: ('DUP', 0, 10, 11, 3, 'Duplicate 10th stack item.'),
+        0x8a: ('DUP', 0, 11, 12, 3, 'Duplicate 11th stack item.'),
+        0x8b: ('DUP', 0, 12, 13, 3, 'Duplicate 12th stack item.'),
+        0x8c: ('DUP', 0, 13, 14, 3, 'Duplicate 13th stack item.'),
+        0x8d: ('DUP', 0, 14, 15, 3, 'Duplicate 14th stack item.'),
+        0x8e: ('DUP', 0, 15, 16, 3, 'Duplicate 15th stack item.'),
+        0x8f: ('DUP', 0, 16, 17, 3, 'Duplicate 16th stack item.'),
+        0x90: ('SWAP', 0, 2, 2, 3, 'Exchange 1st and 2nd stack items.'),
+        0x91: ('SWAP', 0, 3, 3, 3, 'Exchange 1st and 3rd stack items.'),
+        0x92: ('SWAP', 0, 4, 4, 3, 'Exchange 1st and 4th stack items.'),
+        0x93: ('SWAP', 0, 5, 5, 3, 'Exchange 1st and 5th stack items.'),
+        0x94: ('SWAP', 0, 6, 6, 3, 'Exchange 1st and 6th stack items.'),
+        0x95: ('SWAP', 0, 7, 7, 3, 'Exchange 1st and 7th stack items.'),
+        0x96: ('SWAP', 0, 8, 8, 3, 'Exchange 1st and 8th stack items.'),
+        0x97: ('SWAP', 0, 9, 9, 3, 'Exchange 1st and 9th stack items.'),
+        0x98: ('SWAP', 0, 10, 10, 3, 'Exchange 1st and 10th stack items.'),
+        0x99: ('SWAP', 0, 11, 11, 3, 'Exchange 1st and 11th stack items.'),
+        0x9a: ('SWAP', 0, 12, 12, 3, 'Exchange 1st and 12th stack items.'),
+        0x9b: ('SWAP', 0, 13, 13, 3, 'Exchange 1st and 13th stack items.'),
+        0x9c: ('SWAP', 0, 14, 14, 3, 'Exchange 1st and 14th stack items.'),
+        0x9d: ('SWAP', 0, 15, 15, 3, 'Exchange 1st and 15th stack items.'),
+        0x9e: ('SWAP', 0, 16, 16, 3, 'Exchange 1st and 16th stack items.'),
+        0x9f: ('SWAP', 0, 17, 17, 3, 'Exchange 1st and 17th stack items.'),
+        0xa0: ('LOG', 0, 2, 0, 375, 'Append log record with no topics.'),
+        0xa1: ('LOG', 0, 3, 0, 750, 'Append log record with one topic.'),
+        0xa2: ('LOG', 0, 4, 0, 1125, 'Append log record with two topics.'),
+        0xa3: ('LOG', 0, 5, 0, 1500, 'Append log record with three topics.'),
+        0xa4: ('LOG', 0, 6, 0, 1875, 'Append log record with four topics.'),
+        0xf0: ('CREATE', 0, 3, 1, 32000, 'Create a new account with associated code.'),
+        0xf1: ('CALL', 0, 7, 1, 40, 'Message-call into an account.'),
+        0xf2: ('CALLCODE', 0, 7, 1, 40, "Message-call into this account with alternative account's code."),
+        0xf3: ('RETURN', 0, 2, 0, 0, 'Halt execution returning output data.'),
+        0xf4: ('DELEGATECALL', 0, 6, 1, 40, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
+        0xf5: ('CREATE2', 0, 4, 1, 32000, 'Skinny CREATE2. Creates child contracts with custom nonce. Allows interactions to be made with addresses that do not exist yet on-chain.'),
+        0xfa: ('STATICCALL', 0, 6, 1, 40, 'Static message-call into an account.'),
+        0xfd: ('REVERT', 0, 2, 0, 0, 'Stop execution and revert state changes, without consuming all provided gas and providing a reason.'),
+        0xfe: ('INVALID', 0, 0, 0, 0, 'Designated invalid instruction.'),
+        0xff: ('SELFDESTRUCT', 0, 1, 0, 5000, 'Halt execution and register account for later deletion.')
     })
+}
 
 
 class Instruction(object):
@@ -510,7 +797,7 @@ class Instruction(object):
     @property
     def is_starttx(self):
         """ True if the instruction is a transaction initiator """
-        return self.semantics in ('CREATE', 'CALL', 'CALLCODE', 'DELEGATECALL')
+        return self.semantics in ('CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL')
 
     @property
     def is_branch(self):
@@ -536,16 +823,18 @@ class Instruction(object):
     def is_arithmetic(self):
         """ True if the instruction is an arithmetic operation """
         return self.semantics in (
-            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND')
+            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR')
 
 
-def assemble_one(asmcode, pc=0):
+def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
     """ Assemble one EVM instruction from its textual representation.
 
         :param asmcode: assembly code for one instruction
         :type asmcode: str
         :param pc: program counter of the instruction(optional)
         :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: An Instruction object
         :rtype: Instruction
 
@@ -556,6 +845,7 @@ def assemble_one(asmcode, pc=0):
 
     """
     try:
+        instruction_table = instruction_tables[fork]
         asmcode = asmcode.strip().split(' ')
         instr = instruction_table[asmcode[0].upper()]
         if pc:
@@ -568,13 +858,15 @@ def assemble_one(asmcode, pc=0):
         raise AssembleError("Something wrong at pc %d" % pc)
 
 
-def assemble_all(asmcode, pc=0):
+def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
         :type asmcode: str
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: An generator of Instruction objects
         :rtype: generator[Instructions]
 
@@ -598,12 +890,12 @@ def assemble_all(asmcode, pc=0):
     for line in asmcode:
         if not line.strip():
             continue
-        instr = assemble_one(line, pc=pc)
+        instr = assemble_one(line, pc=pc, fork=fork)
         yield instr
         pc += instr.size
 
 
-def disassemble_one(bytecode, pc=0, silent=False):
+def disassemble_one(bytecode, pc=0, silent=False, fork=DEFAULT_FORK):
     """ Disassemble a single instruction from a bytecode
 
         :param bytecode: the bytecode stream
@@ -612,6 +904,8 @@ def disassemble_one(bytecode, pc=0, silent=False):
         :type pc: int
         :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
         :type silent: bool
+        :param fork: fork name (optional)
+        :type fork: str
         :return: an Instruction object
         :rtype: Instruction
 
@@ -620,6 +914,7 @@ def disassemble_one(bytecode, pc=0, silent=False):
             >>> print disassemble_one('\x60\x10')
 
     """
+    instruction_table = instruction_tables[fork]
     if isinstance(bytecode, bytes):
         bytecode = bytearray(bytecode)
     if isinstance(bytecode, str):
@@ -648,7 +943,7 @@ def disassemble_one(bytecode, pc=0, silent=False):
             # comlete intruction operand with zeroes
             if silent:
                 from itertools import chain, repeat
-                bytecode = chain(bytecode, repeat(0)
+                bytecode = chain(bytecode, repeat(0))
 
             instruction.parse_operand(bytecode)
     except ParseError:
@@ -657,7 +952,7 @@ def disassemble_one(bytecode, pc=0, silent=False):
         return instruction
 
 
-def disassemble_all(bytecode, pc=0, silent=False):
+def disassemble_all(bytecode, pc=0, silent=False, fork=DEFAULT_FORK):
     """ Disassemble all instructions in bytecode
 
         :param bytecode: an evm bytecode (binary)
@@ -666,6 +961,8 @@ def disassemble_all(bytecode, pc=0, silent=False):
         :type pc: int
         :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
         :type silent: bool
+        :param fork: fork name (optional)
+        :type fork: str
         :return: An generator of Instruction objects
         :rtype: list[Instruction]
 
@@ -695,22 +992,24 @@ def disassemble_all(bytecode, pc=0, silent=False):
 
     bytecode = iter(bytecode)
     while True:
-        instr = disassemble_one(bytecode, pc=pc, silent=silent)
+        instr = disassemble_one(bytecode, pc=pc, silent=silent, fork=fork)
         if not instr:
-            raise StopIteration
+            return
         pc += instr.size
         yield instr
 
 
-def disassemble(bytecode, pc=0, silent=False):
+def disassemble(bytecode, pc=0, silent=False, fork=DEFAULT_FORK):
     """ Disassemble an EVM bytecode
 
         :param bytecode: binary representation of an evm bytecode
         :type bytecode: str | bytes | bytearray
         :param pc: program counter of the first instruction(optional)
+        :type pc: int
         :param silent: if True disassemble unrecognized instructions as INVALID or incomplete intruction operands as zero 
         :type silent: bool
-        :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: the text representation of the assembler code
 
         Example use::
@@ -724,16 +1023,18 @@ def disassemble(bytecode, pc=0, silent=False):
             PUSH2 0x100
 
     """
-    return '\n'.join(map(str, disassemble_all(bytecode, pc=pc, silent=silent)))
+    return '\n'.join(map(str, disassemble_all(bytecode, pc=pc, silent=silent, fork=fork)))
 
 
-def assemble(asmcode, pc=0):
+def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
         :type asmcode: str
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: the hex representation of the bytecode
         :rtype: str
 
@@ -748,16 +1049,18 @@ def assemble(asmcode, pc=0):
             ...
             b"\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
     """
-    return b''.join([x.bytes for x in assemble_all(asmcode, pc=pc)])
+    return b''.join(x.bytes for x in assemble_all(asmcode, pc=pc, fork=fork))
 
 
-def disassemble_hex(bytecode, pc=0):
+def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
     """ Disassemble an EVM bytecode
 
         :param bytecode: canonical representation of an evm bytecode (hexadecimal)
         :type bytecode: str
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: the text representation of the assembler code
         :rtype: str
 
@@ -775,16 +1078,18 @@ def disassemble_hex(bytecode, pc=0):
     if bytecode.startswith('0x'):
         bytecode = bytecode[2:]
     bytecode = unhexlify(bytecode)
-    return disassemble(bytecode, pc=pc)
+    return disassemble(bytecode, pc=pc, fork=fork)
 
 
-def assemble_hex(asmcode, pc=0):
+def assemble_hex(asmcode, pc=0, fork=DEFAULT_FORK):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
         :type asmcode: str | iterator[Instruction]
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param fork: fork name (optional)
+        :type fork: str
         :return: the hex representation of the bytecode
         :rtype: str
 
@@ -801,4 +1106,33 @@ def assemble_hex(asmcode, pc=0):
     """
     if isinstance(asmcode, list):
         return '0x' + hexlify(b''.join([x.bytes for x in asmcode])).decode('ascii')
-    return '0x' + hexlify(assemble(asmcode, pc=pc)).decode('ascii')
+    return '0x' + hexlify(assemble(asmcode, pc=pc, fork=fork)).decode('ascii')
+
+def block_to_fork(block_number):
+    """ Convert block number to fork name.
+
+        :param block_number: block number
+        :type block_number: int
+        :return: fork name
+        :rtype: str
+
+        Example use::
+
+            >>> block_to_fork(0)
+            ...
+            "pre-byzantium"
+            >>> block_to_fork(4370000)
+            ...
+            "byzantium"
+            >>> block_to_fork(4370001)
+            ...
+            "byzantium"
+    """
+    forks_by_block = {
+        0: "pre-byzantium",
+        4370000: "byzantium",
+        9999999: "constantinople"  # to be replaced after Constantinople launch
+    }
+    fork_names = list(forks_by_block.values())
+    fork_blocks = list(forks_by_block.keys())
+    return fork_names[bisect(fork_blocks, block_number) - 1]
