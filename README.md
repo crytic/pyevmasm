@@ -23,6 +23,9 @@ optional arguments:
                         Input file, default=stdin
   -o [OUTPUT], --output [OUTPUT]
                         Output file, default=stdout
+  -f FORK, --fork FORK  Fork, default: byzantium. Possible: [pre-byzantium,
+                        byzantium, constantinople]. Also an unsigned block
+                        number is accepted to select the fork.
 ```
 
 Disassembling the preamble of compiled contract:
@@ -44,7 +47,8 @@ $ echo -n "608060405260043610603f57600035" | evmasm -d
 ## Python API Examples
 
 ```
->>> from pyevmasm import instruction_table, disassemble_hex, disassemble_all, assemble_hex
+>>> from pyevmasm import instruction_tables, disassemble_hex, disassemble_all, assemble_hex
+>>> instruction_table = instruction_tables['byzantium']
 >>> instruction_table[20]
 Instruction(0x14, 'EQ', 0, 2, 1, 3, 'Equality comparision.', None, 0)
 >>> instruction_table['EQ']
