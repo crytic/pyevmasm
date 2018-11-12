@@ -420,7 +420,7 @@ class Instruction(object):
 
     def __str__(self):
         if self.has_operand:
-            if self.operand:
+            if self.operand is not None:
                 return '{} 0x{:x}'.format(self.name, self.operand)
             else:
                 return '{} ???'.format(self.name)
