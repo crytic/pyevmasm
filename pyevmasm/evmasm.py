@@ -2,6 +2,7 @@ from bisect import bisect
 from binascii import hexlify, unhexlify
 from builtins import map, next, range, object
 from future.builtins import next, bytes
+import copy
 
 DEFAULT_FORK = "byzantium"
 
@@ -730,7 +731,7 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
 
     assert isinstance(opcode, int)
 
-    instruction = instruction_table.get(opcode, None)
+    instruction = copy.copy(instruction_table.get(opcode, None))
     if instruction is None:
         instruction = Instruction(opcode, 'INVALID', 0, 0, 0, 0, 'Unspecified invalid instruction.')
     instruction.pc = pc
