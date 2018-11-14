@@ -45,12 +45,12 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.is_branch)
 
     def test_pre_byzantium(self):
-        insn = EVMAsm.disassemble_one(b'\x57', fork='pre-byzantium')
+        insn = EVMAsm.disassemble_one(b'\x57', fork='frontier')
         self.assertTrue(insn.mnemonic == 'JUMPI')
         self.assertTrue(insn.is_branch)
-        insn = EVMAsm.disassemble_one(b'\xfa', fork='pre-byzantium')
+        insn = EVMAsm.disassemble_one(b'\xfa', fork='frontier')
         self.assertTrue(insn.mnemonic == 'INVALID')  # STATICCALL added in byzantium
-        insn = EVMAsm.disassemble_one(b'\xfd', fork='pre-byzantium')
+        insn = EVMAsm.disassemble_one(b'\xfd', fork='frontier')
         self.assertTrue(insn.mnemonic == 'INVALID')  # REVERT added in byzantium
 
     def test_byzantium_fork(self):
