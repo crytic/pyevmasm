@@ -621,12 +621,12 @@ class InstructionTable():
         Instruction(0x3, 'SUB', 0, 2, 1, 3, 'Subtraction operation.', None, 0)
 
     """
-    __slots__ = ('_previous_fork', '_ilist', '_cache')
+    __slots__ = ('_previous_fork', '_ilist', '_cache', '_name_to_opcode')
     def __init__(self, *args, **kwargs):
         self._previous_fork = kwargs.get('previous_fork', None)
-        self._ilist = {}
-        self._ilist.update(args[0])
+        self._ilist = dict(args[0])
         self._cache = {}
+        self._name_to_opcode = None
 
     def _search_by_opcode(self, k):
         try:
@@ -637,21 +637,26 @@ class InstructionTable():
         raise KeyError(k)
 
     def _search_by_name(self, k):
-        for opcode, (name, operand_size, pushes, pops, gas, description) in self._ilist.items():
-            if name == 'PUSH':
-                long_name = 'PUSH%d' % operand_size
-            elif name == 'DUP':
-                long_name = 'DUP%d' % pops
-            elif name == 'SWAP':
-                long_name = 'SWAP%d' % (pops - 1)
-            elif name == 'LOG':
-                long_name ='LOG%d' % (pops - 2)
-            else:
-                long_name = name
-            if long_name == k:
-                return (opcode, name, operand_size, pushes, pops, gas, description)
-        if self._previous_fork is not None:
-            return self._previous_fork._search_by_name(k)
+        if self._name_to_opcode is None:
+            self._name_to_opcode = {}
+            for opcode, (name, operand_size, pushes, pops, gas, description) in self._ilist.items():
+                if name == 'PUSH':
+                    long_name = 'PUSH%d' % operand_size
+                elif name == 'DUP':
+                    long_name = 'DUP%d' % pops
+                elif name == 'SWAP':
+                    long_name = 'SWAP%d' % (pops - 1)
+                elif name == 'LOG':
+                    long_name ='LOG%d' % (pops - 2)
+                else:
+                    long_name = name
+                self._name_to_opcode[long_name] = opcode
+
+        try:
+            return self._search_by_opcode(self._name_to_opcode[k])
+        except KeyError:
+            if self._previous_fork is not None:
+                return self._previous_fork._search_by_name(k)
         raise KeyError(k)
 
     def _search(self, k):
