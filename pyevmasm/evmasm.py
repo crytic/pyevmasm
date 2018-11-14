@@ -73,9 +73,9 @@ class InstructionTable(dict):
 
     """
     __slots__ = ('_previous_fork', '_cache')
-    def __init__(self, *args, previous_fork=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(InstructionTable, self).__init__(*args, **kwargs)
-        self._previous_fork = previous_fork
+        self._previous_fork = kwargs.get('previous_fork', None)
         self._cache = {}
 
 
@@ -339,7 +339,7 @@ constantinople_instruction_table = InstructionTable(constantinople_instruction_t
 
 serenity_instruction_table = InstructionTable({}, previous_fork=constantinople_instruction_table)
 
-order = ("frontier", "homestead", "tangerine_whistle", "spurious_dragon", "byzantium", "constantinople", "serenity")
+accepted_forks = ("frontier", "homestead", "tangerine_whistle", "spurious_dragon", "byzantium", "constantinople", "serenity")
 instruction_tables = {
 'frontier': frontier_instruction_table,
 'homestead': homestead_instruction_table,
@@ -910,7 +910,7 @@ def block_to_fork(block_number):
 
             >>> block_to_fork(0)
             ...
-            "pre-byzantium"
+            "frontier"
             >>> block_to_fork(4370000)
             ...
             "byzantium"
@@ -919,9 +919,14 @@ def block_to_fork(block_number):
             "byzantium"
     """
     forks_by_block = {
-        0: "pre-byzantium",
+        0: "frontier",
+        1150000: "homestead",
+        # 1920000 Dao 
+        2463000: "tangerine_whistle",    
+        2675000: "spurious_dragon",
         4370000: "byzantium",
-        9999999: "constantinople"  # to be replaced after Constantinople launch
+        9999998: "constantinople",  # to be replaced after Constantinople launch
+        9999999: "serenity"  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
