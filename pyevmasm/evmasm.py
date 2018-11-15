@@ -621,25 +621,26 @@ class InstructionTable():
         Instruction(0x3, 'SUB', 0, 2, 1, 3, 'Subtraction operation.', None, 0)
 
     """
-    __slots__ = ('_previous_fork', '_ilist', '_cache', '_name_to_opcode')
+    __slots__ = ('_instruction_list', '__name_to_opcode')
     def __init__(self, *args, **kwargs):
-        self._previous_fork = kwargs.get('previous_fork', None)
-        self._ilist = dict(args[0])
-        self._cache = {}
-        self._name_to_opcode = None
+        previous_fork = kwargs.get('previous_fork', None)
 
-    def _search_by_opcode(self, k):
-        try:
-            return (k, *self._ilist[k])
-        except KeyError:
-            if self._previous_fork is not None:
-                return self._previous_fork._search_by_opcode(k)
-        raise KeyError(k)
+        self._instruction_list = {}
+        self.__name_to_opcode = None
 
-    def _search_by_name(self, k):
-        if self._name_to_opcode is None:
-            self._name_to_opcode = {}
-            for opcode, (name, operand_size, pushes, pops, gas, description) in self._ilist.items():
+        if previous_fork is not None:
+            if not isinstance(previous_fork, self.__class__):
+                raise TypeError("{} expected".format(self.__class__))
+            self._instruction_list.update(previous_fork._instruction_list)
+
+        self._instruction_list.update(args[0])
+        self.__name_to_opcode = None
+
+    @property
+    def _name_to_opcode(self):
+        if self.__name_to_opcode is None:
+            self.__name_to_opcode = {}
+            for opcode, (name, operand_size, pushes, pops, gas, description) in self._instruction_list.items():
                 if name == 'PUSH':
                     long_name = 'PUSH%d' % operand_size
                 elif name == 'DUP':
@@ -650,23 +651,20 @@ class InstructionTable():
                     long_name ='LOG%d' % (pops - 2)
                 else:
                     long_name = name
-                self._name_to_opcode[long_name] = opcode
+                self.__name_to_opcode[long_name] = opcode
+        return self.__name_to_opcode
 
-        try:
-            return self._search_by_opcode(self._name_to_opcode[k])
-        except KeyError:
-            if self._previous_fork is not None:
-                return self._previous_fork._search_by_name(k)
-        raise KeyError(k)
+    def _search_by_name(self, k):
+        return self._search_by_opcode(self._name_to_opcode[k])
+
+    def _search_by_opcode(self, k):
+        return (k, *self._instruction_list[k])
 
     def _search(self, k):
-        if k in self._cache:
-            return self._cache[k]
         try:
             value = self._search_by_opcode(k)
         except KeyError:
             value = self._search_by_name(k)
-        self._cache[k] = value
         return value
 
     def __getitem__(self, k):
@@ -679,15 +677,10 @@ class InstructionTable():
             return default
 
     def __contains__(self, k):
-        if k not in self._ilist:
-            if self._previous_fork is not None:
-                return k in self._previous_fork
+        return k in self._instruction_list or k in self._name_to_opcode 
 
     def keys(self):
-        keys = ()
-        if self._previous_fork is not None:
-            keys = self._previous_fork.keys()
-        return tuple(set(tuple(self._ilist.keys()) + keys))
+        return self._instruction_list.keys()
 
     def __repr__(self):
         return '{}({})'.format(type(self).__name__, super(InstructionTable, self).__repr__())
