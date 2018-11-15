@@ -689,9 +689,6 @@ class InstructionTable():
             keys = self._previous_fork.keys()
         return tuple(set(tuple(self._ilist.keys()) + keys))
 
-    def copy(self):
-        return type(self)(self)
-
     def __repr__(self):
         return '{}({})'.format(type(self).__name__, super(InstructionTable, self).__repr__())
 
