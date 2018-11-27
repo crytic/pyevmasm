@@ -7,7 +7,7 @@ pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machi
 `evmasm` is a commandline utility that uses pyevmasm to assemble or disassemble EVM:
 
 ```
-usage: evmasm [-h] (-a | -d | -t) [-bi] [-bo] [-i [INPUT]] [-o [OUTPUT]]
+usage: evmasm [-h] (-a | -d | -t) [-bi] [-bo] [-i [INPUT]] [-o [OUTPUT]] [-f FORK]
 
 pyevmasm the EVM assembler and disassembler
 
@@ -23,9 +23,10 @@ optional arguments:
                         Input file, default=stdin
   -o [OUTPUT], --output [OUTPUT]
                         Output file, default=stdout
-  -f FORK, --fork FORK  Fork, default: byzantium. Possible: [pre-byzantium,
-                        byzantium, constantinople]. Also an unsigned block
-                        number is accepted to select the fork.
+  -f FORK, --fork FORK  Fork, default: byzantium. Possible: frontier,
+                        homestead, tangerine_whistle, spurious_dragon,
+                        byzantium, constantinople, serenity. Also an unsigned
+                        block number is accepted to select the fork.
 ```
 
 Disassembling the preamble of compiled contract:
