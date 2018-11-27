@@ -680,11 +680,11 @@ class InstructionTable():
         return k in self._instruction_list or k in self._name_to_opcode
 
     def __iter__(self):
-        for k, i in self._instruction_list.items():
-            yield Instruction(*((k,)+ i))
+        for k in self.keys():
+            yield Instruction(*((k,)+ self._instruction_list[k]))
 
     def keys(self):
-        return self._instruction_list.keys()
+        return sorted(self._instruction_list.keys())
 
     def __repr__(self):
         return repr(self._instruction_list)
