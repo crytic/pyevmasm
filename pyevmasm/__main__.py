@@ -24,7 +24,6 @@ def main():
                              'Also an unsigned block number is accepted to select the fork.')
 
     args = parser.parse_args(sys.argv[1:])
-
     arg_fork = args.fork.lower()
     if arg_fork not in accepted_forks:
         try:

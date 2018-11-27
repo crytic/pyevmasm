@@ -658,7 +658,7 @@ class InstructionTable():
         return self._search_by_opcode(self._name_to_opcode[k])
 
     def _search_by_opcode(self, k):
-        return (k, *self._instruction_list[k])
+        return (k,) + self._instruction_list[k]
 
     def _search(self, k):
         try:
@@ -677,13 +677,18 @@ class InstructionTable():
             return default
 
     def __contains__(self, k):
-        return k in self._instruction_list or k in self._name_to_opcode 
+        return k in self._instruction_list or k in self._name_to_opcode
+
+    def __iter__(self):
+        for k, i in self._instruction_list.items():
+            yield Instruction(*((k,)+ i))
 
     def keys(self):
         return self._instruction_list.keys()
 
     def __repr__(self):
-        return '{}({})'.format(type(self).__name__, super(InstructionTable, self).__repr__())
+        return repr(self._instruction_list)
+
 
 
 # from http://gavwood.com/paper.pdf
