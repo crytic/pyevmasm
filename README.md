@@ -1,4 +1,6 @@
 # pyevmasm
+[![PyPI version](https://badge.fury.io/py/pyevmasm.svg)](https://badge.fury.io/py/pyevmasm)
+[![Slack Status](https://empireslacking.herokuapp.com/badge.svg)](https://empireslacking.herokuapp.com)
 
 pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machine (EVM). It includes a commandline utility and a Python API.
 
