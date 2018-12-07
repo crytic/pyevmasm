@@ -905,7 +905,7 @@ def block_to_fork(block_number):
         2463000: "tangerine_whistle",    
         2675000: "spurious_dragon",
         4370000: "byzantium",
-        9999998: "constantinople",  # to be replaced after Constantinople launch
+        7080000: "constantinople",  
         9999999: "serenity"  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
