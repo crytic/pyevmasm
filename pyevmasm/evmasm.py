@@ -4,7 +4,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes
 import copy
 
-DEFAULT_FORK = "byzantium"
+DEFAULT_FORK = "petersburg"
 
 """
     Example use::
@@ -474,7 +474,6 @@ def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
 
 
     """
-
     if isinstance(bytecode, bytes):
         bytecode = bytearray(bytecode)
     if isinstance(bytecode, str):
@@ -866,7 +865,7 @@ constantinople_instruction_table = InstructionTable(constantinople_instruction_t
 
 serenity_instruction_table = InstructionTable({}, previous_fork=constantinople_instruction_table)
 
-accepted_forks = ("frontier", "homestead", "tangerine_whistle", "spurious_dragon", "byzantium", "constantinople", "serenity")
+accepted_forks = ("frontier", "homestead", "tangerine_whistle", "spurious_dragon", "byzantium", "constantinople", "petersburg", "serenity")
 instruction_tables = {
 'frontier': frontier_instruction_table,
 'homestead': homestead_instruction_table,
@@ -874,6 +873,7 @@ instruction_tables = {
 'spurious_dragon': spurious_dragon_instruction_table,
 'byzantium': byzantium_instruction_table,
 'constantinople': constantinople_instruction_table,
+'petersburg': constantinople_instruction_table,
 'serenity': serenity_instruction_table,
 }
 
@@ -902,10 +902,11 @@ def block_to_fork(block_number):
         0: "frontier",
         1150000: "homestead",
         # 1920000 Dao 
-        2463000: "tangerine_whistle",    
+        2463000: "tangerine_whistle",
         2675000: "spurious_dragon",
         4370000: "byzantium",
-        7080000: "constantinople",  
+        #7280000: "constantinople", # Same Block as petersburg, commented to avoid conflicts
+        7280000: "petersburg",
         9999999: "serenity"  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
