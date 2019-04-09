@@ -873,7 +873,7 @@ instruction_tables = {
 'spurious_dragon': spurious_dragon_instruction_table,
 'byzantium': byzantium_instruction_table,
 'constantinople': constantinople_instruction_table,
-'petersburg': constantinople_instruction_table,
+'petersburg': constantinople_instruction_table,  # constantinople table is intentional here: those two are aliases 
 'serenity': serenity_instruction_table,
 }
 
