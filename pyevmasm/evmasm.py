@@ -639,7 +639,7 @@ class InstructionTable():
     def _name_to_opcode(self):
         if self.__name_to_opcode is None:
             self.__name_to_opcode = {}
-            for opcode, (name, operand_size, pushes, pops, gas, description) in self._instruction_list.items():
+            for opcode, (name, operand_size, pops, pushes, gas, description) in self._instruction_list.items():
                 if name == 'PUSH':
                     long_name = 'PUSH%d' % operand_size
                 elif name == 'DUP':
