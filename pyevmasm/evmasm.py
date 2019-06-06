@@ -270,12 +270,12 @@ class Instruction(object):
     @property
     def writes_to_memory(self):
         """ True if the instruction writes to memory """
-        return self.semantics in ('MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY', 'RETURNDATACOPY', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE')
+        return self.semantics in {'MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY', 'RETURNDATACOPY', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE'}
 
     @property
     def reads_from_memory(self):
         """ True if the instruction reads from memory """
-        return self.semantics in ('MLOAD', 'CREATE', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE', 'RETURN', 'REVERT')
+        return self.semantics in {'MLOAD', 'CREATE', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE', 'RETURN', 'REVERT'}
 
     @property
     def writes_to_storage(self):
