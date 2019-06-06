@@ -300,7 +300,7 @@ class Instruction(object):
     @property
     def is_starttx(self):
         """ True if the instruction is a transaction initiator """
-        return self.semantics in ('CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL')
+        return self.semantics in ('CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL')
 
     @property
     def is_branch(self):
