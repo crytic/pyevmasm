@@ -280,32 +280,32 @@ class Instruction(object):
     @property
     def writes_to_storage(self):
         """ True if the instruction writes to the storage """
-        return self.semantics in 'SSTORE'
+        return self.semantics == 'SSTORE'
 
     @property
     def reads_from_storage(self):
         """ True if the instruction reads from the storage """
-        return self.semantics in 'SLOAD'
+        return self.semantics == 'SLOAD'
 
     @property
     def is_terminator(self):
         """ True if the instruction is a basic block terminator """
-        return self.semantics in ('RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT')
+        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT'}
 
     @property
     def is_endtx(self):
         """ True if the instruction is a transaction terminator """
-        return self.semantics in ('RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT')
+        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT'}
 
     @property
     def is_starttx(self):
         """ True if the instruction is a transaction initiator """
-        return self.semantics in ('CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL')
+        return self.semantics in {'CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL'}
 
     @property
     def is_branch(self):
         """ True if the instruction is a jump """
-        return self.semantics in ('JUMP', 'JUMPI')
+        return self.semantics in {'JUMP', 'JUMPI'}
 
     @property
     def is_environmental(self):
@@ -325,8 +325,8 @@ class Instruction(object):
     @property
     def is_arithmetic(self):
         """ True if the instruction is an arithmetic operation """
-        return self.semantics in (
-            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR')
+        return self.semantics in {
+            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR'}
 
 
 def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
