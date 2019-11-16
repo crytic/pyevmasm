@@ -491,7 +491,7 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
         return instruction
 
 
-def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_all(bytecode, pc=1, fork=DEFAULT_FORK):
     """ Disassemble all instructions in bytecode
 
         :param bytecode: an evm bytecode (binary)
