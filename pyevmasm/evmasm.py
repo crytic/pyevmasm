@@ -1,7 +1,7 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
 from builtins import map, next, range, object
-from future.builtins import next, bytes
+from builtins import next, bytes
 import copy
 
 DEFAULT_FORK = "petersburg"
@@ -423,7 +423,13 @@ def assemble_all(asmcode, pc=1, fork=DEFAULT_FORK):
     instrs = []
 
     for line in asmcode:
-        if not line.strip():
+        # remove comments
+        index = line.find("#")
+        if index is not -1:
+            line = line[:index]
+        # remove excessive trailing spaces
+        line = line.strip()
+        if not line:
             continue
         if line.endswith(":"):
             # this is a label, record it with location (PC)
