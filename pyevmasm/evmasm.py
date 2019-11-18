@@ -365,7 +365,7 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK, fillins={}):
             instr.pc = pc
         if instr.operand_size > 0:
             assert len(asmcode) == 2
-            operand = asmcode[1]
+            operand = asmcode[1].strip()
             if is_push(instr) and not is_digit(operand):
                 # instantiating a label, fill it with zeros instead
                 instr.operand = 0
