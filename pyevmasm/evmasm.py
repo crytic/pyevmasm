@@ -423,18 +423,27 @@ def assemble_all(asmcode, pc=1, fork=DEFAULT_FORK):
     instrs = []
 
     for line in asmcode:
+        line = line.strip()
+
+        # skip empty lines
+        if not line:
+            continue
+
         # remove comments
         index = line.find("#")
         if index is not -1:
             line = line[:index]
-        # remove excessive trailing spaces
-        line = line.strip()
-        if not line:
+
+        # skip directives:
+        if line.find(".") is 0:
             continue
+
+        # handle labels
         if line.endswith(":"):
             # this is a label, record it with location (PC)
             labels[line[:-1]] = pc
             continue
+
         instr = assemble_one(line, pc=pc, fork=fork, fillins=fillins)
         instrs.append(instr)
         pc += instr.size
