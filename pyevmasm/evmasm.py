@@ -181,8 +181,7 @@ class Instruction(object):
     @operand.setter
     def operand(self, value):
         if self.operand_size != 0 and value is not None:
-            mask = (1 << self.operand_size * 8) - 1
-            if ~mask & value:
+            if value.bit_length() > self.operand_size * 8:
                 raise ValueError("operand should be %d bits long" % (self.operand_size * 8))
             self._operand = value
 
