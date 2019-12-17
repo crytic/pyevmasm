@@ -1,7 +1,7 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
 from builtins import map, next, range, object
-from future.builtins import next, bytes
+from builtins import next, bytes
 import copy
 
 DEFAULT_FORK = "petersburg"
@@ -181,8 +181,7 @@ class Instruction(object):
     @operand.setter
     def operand(self, value):
         if self.operand_size != 0 and value is not None:
-            mask = (1 << self.operand_size * 8) - 1
-            if ~mask & value:
+            if value.bit_length() > self.operand_size * 8:
                 raise ValueError("operand should be %d bits long" % (self.operand_size * 8))
             self._operand = value
 
@@ -329,7 +328,17 @@ class Instruction(object):
             'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR'}
 
 
-def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
+def is_push(instr):
+    return (instr._opcode >= 0x60) and (instr._opcode <= 0x6F)
+
+def is_digit(operand):
+    try:
+        int(operand, 0)
+        return True
+    except:
+        return False
+
+def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK, fillins={}):
     """ Assemble one EVM instruction from its textual representation.
 
         :param asmcode: assembly code for one instruction
@@ -355,13 +364,25 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
             instr.pc = pc
         if instr.operand_size > 0:
             assert len(asmcode) == 2
-            instr.operand = int(asmcode[1], 0)
+            operand = asmcode[1].strip()
+            if is_push(instr) and not is_digit(operand):
+                # instantiating a label, fill it with zeros instead
+                instr.operand = 0
+                if operand in fillins:
+                    fillins[operand].append(pc)
+                else:
+                    fillins[operand] = [pc]
+            else:
+                instr.operand = int(asmcode[1], 0)
         return instr
     except:
         raise AssembleError("Something wrong at pc %d" % pc)
 
+def fixup_instr(instr, label_offset):
+    assert is_push(instr)
+    instr.operand = label_offset
 
-def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_all(asmcode, pc=1, fork=DEFAULT_FORK):
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
@@ -390,13 +411,57 @@ def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
     """
     asmcode = asmcode.split('\n')
     asmcode = iter(asmcode)
+ 
+    # we use a dictionary to record label locations:
+    labels = {}
+    # another dictionary to record which instruction
+    # we need to fill in.
+    fillins = {}
+    # we have to traverse the generated instruction twice
+    # so no use of generator here
+    instrs = []
+
     for line in asmcode:
-        if not line.strip():
+        line = line.strip()
+
+        # skip empty lines
+        if not line:
             continue
-        instr = assemble_one(line, pc=pc, fork=fork)
-        yield instr
+
+        # remove comments
+        index = line.find("#")
+        if index is not -1:
+            line = line[:index]
+
+        # skip directives:
+        if line.find(".") is 0:
+            continue
+
+        # handle labels
+        if line.endswith(":"):
+            # this is a label, record it with location (PC)
+            labels[line[:-1]] = pc
+            continue
+
+        instr = assemble_one(line, pc=pc, fork=fork, fillins=fillins)
+        instrs.append(instr)
         pc += instr.size
 
+    # size of the contract is the current PC
+    labels["deploy.size"] = pc - 1
+
+    # fixup instructions
+    for label in labels:
+        if label not in fillins.keys():
+            continue
+        for instr in instrs:
+            if instr._pc in fillins[label]:
+                label_pc = labels[label]
+                fixup_instr(instr, label_pc)
+
+    # to keep it compatible with existing APIs
+    for instr in instrs:
+        yield instr
 
 def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
     """ Disassemble a single instruction from a bytecode
@@ -443,7 +508,7 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
         return instruction
 
 
-def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_all(bytecode, pc=1, fork=DEFAULT_FORK):
     """ Disassemble all instructions in bytecode
 
         :param bytecode: an evm bytecode (binary)
@@ -513,7 +578,7 @@ def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
     return '\n'.join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
 
 
-def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble(asmcode, pc=1, fork=DEFAULT_FORK):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program

@@ -43,6 +43,30 @@ class EVMTest_Assembler(unittest.TestCase):
         asmcode = EVMAsm.disassemble_hex('0x608040526002610100')
         self.assertEqual(asmcode, '''PUSH1 0x80\nBLOCKHASH\nMSTORE\nPUSH1 0x2\nPUSH2 0x100''')
 
+    def test_label(self):
+        bytecode = EVMAsm.assemble_hex("""
+Start:
+    PUSH1 Return
+    PUSH1 0x11
+    PUSH1 0x22
+    PUSH2 Function
+    JUMP
+Return:
+    JUMPDEST
+    PUSH1 0x00
+    MSTORE
+    PUSH1 0x20
+    PUSH1 0x00
+    RETURN
+Function:
+    JUMPDEST
+    ADD
+    SWAP1
+    JUMP
+        """)
+        self.assertEqual(bytecode,
+                         '0x600a60116022610013565b60005260206000f35b019056')
+
     def test_STOP(self):
         insn = EVMAsm.disassemble_one(b'\x00')
         self.assertTrue(insn.mnemonic == 'STOP')
