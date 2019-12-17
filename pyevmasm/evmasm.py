@@ -447,6 +447,9 @@ def assemble_all(asmcode, pc=1, fork=DEFAULT_FORK):
         instrs.append(instr)
         pc += instr.size
 
+    # size of the contract is the current PC
+    labels["deploy.size"] = pc - 1
+
     # fixup instructions
     for label in labels:
         if label not in fillins.keys():
