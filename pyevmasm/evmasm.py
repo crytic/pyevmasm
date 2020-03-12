@@ -145,7 +145,7 @@ class Instruction(object):
         """ Alias for name """
         return self.name
 
-
+    @staticmethod
     def _long_name(self, short_name, operand_size, pops):
         if short_name == "PUSH":
             return "PUSH{:d}".format(operand_size)
@@ -690,7 +690,7 @@ class InstructionTable:
         if self.__name_to_opcode is None:
             self.__name_to_opcode = {}
             for opcode, (name, operand_size, pops, pushes, gas, description) in self._instruction_list.items():
-                long_name = self._long_name(name, operand_size, pops)
+                long_name = Instruction._long_name(name, operand_size, pops)
                 self.__name_to_opcode[long_name] = opcode
         return self.__name_to_opcode
 
