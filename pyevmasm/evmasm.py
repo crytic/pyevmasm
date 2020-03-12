@@ -145,18 +145,22 @@ class Instruction(object):
         """ Alias for name """
         return self.name
 
+
+    def _long_name(self, short_name, operand_size, pops):
+        if short_name == "PUSH":
+            return "PUSH{:d}".format(operand_size)
+        elif short_name == "DUP":
+            return "DUP{:d}".format(pops)
+        elif short_name == "SWAP":
+            return "SWAP{:d}".format(pops - 1)
+        elif short_name == "LOG":
+            return "LOG{:d}".format(pops - 2)
+        return short_name
+
     @property
     def name(self):
         """ The instruction name/mnemonic """
-        if self._name == "PUSH":
-            return "PUSH%d" % self.operand_size
-        elif self._name == "DUP":
-            return "DUP%d" % self.pops
-        elif self._name == "SWAP":
-            return "SWAP%d" % (self.pops - 1)
-        elif self._name == "LOG":
-            return "LOG%d" % (self.pops - 2)
-        return self._name
+        return self._long_name(self._name, self._operand_size, self._pops)
 
     def parse_operand(self, buf):
         """ Parses an operand from buf
@@ -193,7 +197,7 @@ class Instruction(object):
         if self.operand_size != 0 and value is not None:
             mask = (1 << self.operand_size * 8) - 1
             if ~mask & value:
-                raise ValueError("operand should be %d bits long" % (self.operand_size * 8))
+                raise ValueError("operand should be {:d} bits long".format(self.operand_size * 8))
             self._operand = value
 
     @property
@@ -280,42 +284,42 @@ class Instruction(object):
     @property
     def writes_to_memory(self):
         """ True if the instruction writes to memory """
-        return self.semantics in ("MSTORE", "MSTORE8", "CALLDATACOPY", "CODECOPY", "EXTCODECOPY")
+        return self.semantics in {'MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY', 'RETURNDATACOPY', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE'}
 
     @property
     def reads_from_memory(self):
         """ True if the instruction reads from memory """
-        return self.semantics in ("MLOAD", "CREATE", "CALL", "CALLCODE", "RETURN", "DELEGATECALL", "REVERT")
+        return self.semantics in {'MLOAD', 'CREATE', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE', 'RETURN', 'REVERT'}
 
     @property
     def writes_to_storage(self):
         """ True if the instruction writes to the storage """
-        return self.semantics in "SSTORE"
+        return self.semantics == 'SSTORE'
 
     @property
     def reads_from_storage(self):
         """ True if the instruction reads from the storage """
-        return self.semantics in "SLOAD"
+        return self.semantics == 'SLOAD'
 
     @property
     def is_terminator(self):
         """ True if the instruction is a basic block terminator """
-        return self.semantics in ("RETURN", "STOP", "INVALID", "JUMP", "JUMPI", "SELFDESTRUCT", "REVERT")
+        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT'}
 
     @property
     def is_endtx(self):
         """ True if the instruction is a transaction terminator """
-        return self.semantics in ("RETURN", "STOP", "INVALID", "SELFDESTRUCT", "REVERT")
+        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT'}
 
     @property
     def is_starttx(self):
         """ True if the instruction is a transaction initiator """
-        return self.semantics in ("CREATE", "CREATE2", "CALL", "CALLCODE", "DELEGATECALL")
+        return self.semantics in {'CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL'}
 
     @property
     def is_branch(self):
         """ True if the instruction is a jump """
-        return self.semantics in ("JUMP", "JUMPI")
+        return self.semantics in {'JUMP', 'JUMPI'}
 
     @property
     def is_environmental(self):
@@ -335,22 +339,8 @@ class Instruction(object):
     @property
     def is_arithmetic(self):
         """ True if the instruction is an arithmetic operation """
-        return self.semantics in (
-            "ADD",
-            "MUL",
-            "SUB",
-            "DIV",
-            "SDIV",
-            "MOD",
-            "SMOD",
-            "ADDMOD",
-            "MULMOD",
-            "EXP",
-            "SIGNEXTEND",
-            "SHL",
-            "SHR",
-            "SAR",
-        )
+        return self.semantics in {
+            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR'}
 
 
 def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
@@ -382,7 +372,7 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
             instr.operand = int(asmcode[1], 0)
         return instr
     except:
-        raise AssembleError("Something wrong at pc %d" % pc)
+        raise AssembleError("Something wrong at pc {:d}".format(pc))
 
 
 def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
@@ -665,17 +655,8 @@ class InstructionTable:
     def _name_to_opcode(self):
         if self.__name_to_opcode is None:
             self.__name_to_opcode = {}
-            for opcode, (name, operand_size, pushes, pops, gas, description) in self._instruction_list.items():
-                if name == "PUSH":
-                    long_name = "PUSH%d" % operand_size
-                elif name == "DUP":
-                    long_name = "DUP%d" % pops
-                elif name == "SWAP":
-                    long_name = "SWAP%d" % (pops - 1)
-                elif name == "LOG":
-                    long_name = "LOG%d" % (pops - 2)
-                else:
-                    long_name = name
+            for opcode, (name, operand_size, pops, pushes, gas, description) in self._instruction_list.items():
+                long_name = self._long_name(name, operand_size, pops)
                 self.__name_to_opcode[long_name] = opcode
         return self.__name_to_opcode
 

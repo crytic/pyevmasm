@@ -1,6 +1,14 @@
+import sys
 import unittest
 
 import pyevmasm as EVMAsm
+
+
+def int_to_bytes(i):
+    if sys.version_info[0] >= 3:
+        return i.to_bytes(1, 'little')
+    else:
+        return bytes(chr(i))
 
 
 # noinspection PyPep8Naming
@@ -86,6 +94,36 @@ class EVMTest_Assembler(unittest.TestCase):
         insn = EVMAsm.disassemble_one(b"\xf5", fork="constantinople")
         self.assertTrue(insn.mnemonic == "CREATE2")
 
+    def test_assemble_DUP1_regression(self):
+        insn = EVMAsm.assemble_one("DUP1")
+        self.assertEqual(insn.mnemonic, "DUP1")
+        self.assertEqual(insn.opcode, 0x80)
 
-if __name__ == "__main__":
+    def test_assemble_LOGX_regression(self):
+        inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
+        log0_opcode = 0xa0
+        for n in range(5):
+            opcode = log0_opcode + n
+            self.assertTrue(opcode in inst_table, "{!r} not in instruction_table".format(opcode))
+            asm = "LOG" + str(n)
+            self.assertTrue(asm in inst_table, "{!r} not in instruction_table".format(asm))
+            insn = EVMAsm.assemble_one(asm)
+            self.assertEqual(insn.mnemonic, asm)
+            self.assertEqual(insn.opcode, opcode)
+
+    def test_consistency_assembler_disassembler(self):
+        """
+        Tests whether every opcode that can be disassembled, can also be
+        assembled again.
+        """
+        inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
+        for opcode in inst_table.keys():
+            b = int_to_bytes(opcode) + b"\x00" * 32
+            inst_dis = EVMAsm.disassemble_one(b)
+            a = str(inst_dis)
+            inst_as = EVMAsm.assemble_one(a)
+            self.assertEqual(inst_dis, inst_as)
+
+
+if __name__ == '__main__':
     unittest.main()
