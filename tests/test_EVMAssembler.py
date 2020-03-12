@@ -91,10 +91,39 @@ class EVMTest_Assembler(unittest.TestCase):
         insn = EVMAsm.disassemble_one(b'\xf5', fork='constantinople')
         self.assertTrue(insn.mnemonic == 'CREATE2')
 
+    def test_istanbul_fork(self):
+        insn = EVMAsm.disassemble_one(b'\x31', fork='istanbul')
+        self.assertTrue(insn.mnemonic == 'BALANCE')
+        self.assertTrue(insn.fee == 700)
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        insn = EVMAsm.disassemble_one(b'\x3f', fork='istanbul')
+        self.assertTrue(insn.mnemonic == 'EXTCODEHASH')
+        self.assertTrue(insn.fee == 700)
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        insn = EVMAsm.disassemble_one(b'\x46', fork='istanbul')
+        self.assertTrue(insn.mnemonic == 'CHAINID')
+        self.assertTrue(insn.fee == 2)
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
+        insn = EVMAsm.disassemble_one(b'\x47', fork='istanbul')
+        self.assertTrue(insn.mnemonic == 'SELFBALANCE')
+        self.assertTrue(insn.fee == 5)
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
+        insn = EVMAsm.disassemble_one(b'\x54', fork='istanbul')
+        self.assertTrue(insn.mnemonic == 'SLOAD')
+        self.assertTrue(insn.fee == 800)
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+
+
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")
         self.assertEqual(insn.mnemonic, "DUP1")
         self.assertEqual(insn.opcode, 0x80)
+
 
     def test_assemble_LOGX_regression(self):
         inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
@@ -107,6 +136,7 @@ class EVMTest_Assembler(unittest.TestCase):
             insn = EVMAsm.assemble_one(asm)
             self.assertEqual(insn.mnemonic, asm)
             self.assertEqual(insn.opcode, opcode)
+
 
     def test_consistency_assembler_disassembler(self):
         """
