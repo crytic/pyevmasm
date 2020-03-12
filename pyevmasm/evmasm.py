@@ -145,7 +145,7 @@ class Instruction(object):
         """ Alias for name """
         return self.name
 
-
+    @staticmethod
     def _long_name(self, short_name, operand_size, pops):
         if short_name == "PUSH":
             return "PUSH{:d}".format(operand_size)
@@ -284,42 +284,62 @@ class Instruction(object):
     @property
     def writes_to_memory(self):
         """ True if the instruction writes to memory """
-        return self.semantics in {'MSTORE', 'MSTORE8', 'CALLDATACOPY', 'CODECOPY', 'EXTCODECOPY', 'RETURNDATACOPY', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE'}
+        return self.semantics in {
+            "MSTORE",
+            "MSTORE8",
+            "CALLDATACOPY",
+            "CODECOPY",
+            "EXTCODECOPY",
+            "RETURNDATACOPY",
+            "CALL",
+            "STATICCALL",
+            "DELEGATECALL",
+            "CALLCODE",
+        }
 
     @property
     def reads_from_memory(self):
         """ True if the instruction reads from memory """
-        return self.semantics in {'MLOAD', 'CREATE', 'CALL', 'STATICCALL', 'DELEGATECALL', 'CALLCODE', 'RETURN', 'REVERT'}
+        return self.semantics in {
+            "MLOAD",
+            "CREATE",
+            "CALL",
+            "STATICCALL",
+            "DELEGATECALL",
+            "CALLCODE",
+            "RETURN",
+            "REVERT",
+        }
 
     @property
     def writes_to_storage(self):
         """ True if the instruction writes to the storage """
-        return self.semantics == 'SSTORE'
+        return self.semantics == "SSTORE"
 
     @property
     def reads_from_storage(self):
         """ True if the instruction reads from the storage """
-        return self.semantics == 'SLOAD'
+        return self.semantics == "SLOAD"
 
     @property
     def is_terminator(self):
         """ True if the instruction is a basic block terminator """
-        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'JUMP', 'JUMPI', 'SELFDESTRUCT', 'REVERT'}
+        return self.semantics in {"RETURN", "STOP", "INVALID", "JUMP", "JUMPI", "SELFDESTRUCT", "REVERT"}
 
     @property
     def is_endtx(self):
         """ True if the instruction is a transaction terminator """
-        return self.semantics in {'RETURN', 'STOP', 'INVALID', 'SELFDESTRUCT', 'REVERT'}
+        return self.semantics in {"RETURN", "STOP", "INVALID", "SELFDESTRUCT", "REVERT"}
 
     @property
     def is_starttx(self):
         """ True if the instruction is a transaction initiator """
-        return self.semantics in {'CREATE', 'CREATE2', 'CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL'}
+        return self.semantics in {"CREATE", "CREATE2", "CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"}
 
     @property
     def is_branch(self):
         """ True if the instruction is a jump """
-        return self.semantics in {'JUMP', 'JUMPI'}
+        return self.semantics in {"JUMP", "JUMPI"}
 
     @property
     def is_environmental(self):
@@ -340,7 +360,21 @@ class Instruction(object):
     def is_arithmetic(self):
         """ True if the instruction is an arithmetic operation """
         return self.semantics in {
-            'ADD', 'MUL', 'SUB', 'DIV', 'SDIV', 'MOD', 'SMOD', 'ADDMOD', 'MULMOD', 'EXP', 'SIGNEXTEND', 'SHL', 'SHR', 'SAR'}
+            "ADD",
+            "MUL",
+            "SUB",
+            "DIV",
+            "SDIV",
+            "MOD",
+            "SMOD",
+            "ADDMOD",
+            "MULMOD",
+            "EXP",
+            "SIGNEXTEND",
+            "SHL",
+            "SHR",
+            "SAR",
+        }
 
 
 def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
@@ -656,7 +690,7 @@ class InstructionTable:
         if self.__name_to_opcode is None:
             self.__name_to_opcode = {}
             for opcode, (name, operand_size, pops, pushes, gas, description) in self._instruction_list.items():
-                long_name = self._long_name(name, operand_size, pops)
+                long_name = Instruction._long_name(name, operand_size, pops)
                 self.__name_to_opcode[long_name] = opcode
         return self.__name_to_opcode
 
@@ -928,6 +962,15 @@ constantinople_instruction_table = InstructionTable(
 
 serenity_instruction_table = InstructionTable({}, previous_fork=constantinople_instruction_table)
 
+istanbul_instruction_table = {
+    0x31: ("BALANCE", 0, 1, 1, 700, "Get balance of the given account."),
+    0x3F: ("EXTCODEHASH", 0, 1, 1, 700, "Get hash of code"),
+    0x46: ("CHAINID", 0, 0, 1, 2, "Get current chainid."),
+    0x47: ("SELFBALANCE", 0, 0, 1, 5, "Balance of the current address."),
+    0x54: ("SLOAD", 0, 1, 1, 800, "Load word from storage."),
+}
+istanbul_instruction_table = InstructionTable(istanbul_instruction_table, previous_fork=serenity_instruction_table)
+
 accepted_forks = (
     "frontier",
     "homestead",
@@ -937,7 +980,10 @@ accepted_forks = (
     "constantinople",
     "petersburg",
     "serenity",
+    "istanbul",
 )
+
+
 instruction_tables = {
     "frontier": frontier_instruction_table,
     "homestead": homestead_instruction_table,
@@ -947,6 +993,7 @@ instruction_tables = {
     "constantinople": constantinople_instruction_table,
     "petersburg": constantinople_instruction_table,  # constantinople table is intentional here: those two are aliases
     "serenity": serenity_instruction_table,
+    "istanbul": istanbul_instruction_table,
 }
 
 
