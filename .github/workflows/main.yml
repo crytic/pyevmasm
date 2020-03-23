@@ -27,7 +27,7 @@ jobs:
         black --version
         git diff --name-only $BASE_SHA..$HEAD_SHA | grep "*.py" | xargs black --diff --check
         mypy --version
-        mypy
+        mypy pyevmasm
         
   test37:
     runs-on: ubuntu-latest
