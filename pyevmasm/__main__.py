@@ -3,7 +3,7 @@ import argparse
 import sys
 import binascii
 
-from .evmasm import assemble_hex, disassemble_all, instruction_tables, assemble_all, block_to_fork, DEFAULT_FORK
+from .evmasm import assemble_hex, disassemble_all, instruction_tables, assemble_all, block_to_fork, DEFAULT_FORK, accepted_forks
 
 
 def main():
@@ -19,12 +19,11 @@ def main():
     parser.add_argument('-o', '--output', nargs='?', default=sys.stdout, type=argparse.FileType('w'),
                         help='Output file, default=stdout')
     parser.add_argument('-f', '--fork', default=DEFAULT_FORK, type=str,
-                        help='Fork, default: byzantium. Possible: [pre-byzantium, byzantium, constantinople].'
+                        help='Fork, default: byzantium. '
+                             'Possible: frontier, homestead, tangerine_whistle, spurious_dragon, byzantium, constantinople, serenity. '
                              'Also an unsigned block number is accepted to select the fork.')
 
     args = parser.parse_args(sys.argv[1:])
-
-    accepted_forks = ['pre-byzantium', 'byzantium', 'constantinople']
     arg_fork = args.fork.lower()
     if arg_fork not in accepted_forks:
         try:
