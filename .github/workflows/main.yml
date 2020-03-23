@@ -39,8 +39,7 @@ jobs:
         python-version: 3.7
     - name: Run Tests 37
       run: |
-        pytest --cov=pyevmasm -n auto "tests/"
-        #coverage xml
+        python -m unittest discover "tests/"
 
   test27:
     runs-on: ubuntu-latest
@@ -54,6 +53,5 @@ jobs:
         python-version: 2.7
     - name: Run Tests 27
       run: |
-        pytest --cov=pyevmasm -n auto "tests/"
-        #coverage xml
+        python -m unittest discover "tests/"
 
