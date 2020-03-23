@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ dev-gitactions]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+    - name: Lint
+      if: github.event_name == 'pull_request'
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        pip install -e .[lint]
+        black --version
+        git diff --name-only $BASE_SHA..$HEAD_SHA | python scripts/pyfile_exists.py | xargs black --diff --check
+        mypy --version
+        mypy
+        
+  test37:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Run Tests 37
+      run: |
+        pytest --cov=pyevmasm -n auto "tests/"
+        #coverage xml
+
+  test27:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 2.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 2.7
+    - name: Run Tests 27
+      run: |
+        pytest --cov=pyevmasm -n auto "tests/"
+        #coverage xml
+
