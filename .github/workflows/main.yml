@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ dev-gitactions]
+    branches: [ dev-gitactions, dev-fix]
   pull_request:
     branches: [ master ]
 
