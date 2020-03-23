@@ -39,6 +39,7 @@ jobs:
         python-version: 3.7
     - name: Run Tests 37
       run: |
+        python setup.py install
         python -m unittest discover "tests/"
 
   test27:
@@ -53,5 +54,6 @@ jobs:
         python-version: 2.7
     - name: Run Tests 27
       run: |
+        python setup.py install
         python -m unittest discover "tests/"
 
