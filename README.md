@@ -1,4 +1,5 @@
 # pyevmasm
+![CI](https://github.com/crytic/pyevmasm/workflows/CI/badge.svg)
 [![PyPI version](https://badge.fury.io/py/pyevmasm.svg)](https://badge.fury.io/py/pyevmasm)
 [![Slack Status](https://empireslacking.herokuapp.com/badge.svg)](https://empireslacking.herokuapp.com)
 
