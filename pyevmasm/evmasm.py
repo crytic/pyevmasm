@@ -5,7 +5,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes  # type: ignore
 import copy
 
-DEFAULT_FORK = "petersburg"
+DEFAULT_FORK = "istanbul"
 
 """
     Example use::
