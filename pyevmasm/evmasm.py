@@ -953,7 +953,7 @@ constantinople_instruction_table = {
     0xF5: (
         "CREATE2",
         0,
-        3,
+        4,
         1,
         32000,
         "Behaves identically to CREATE, except using keccak256( 0xff ++ address ++ salt ++ keccak256(init_code)))[12:] as the address where the contract is initialized at",
