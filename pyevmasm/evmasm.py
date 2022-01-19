@@ -5,7 +5,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes  # type: ignore
 import copy
 
-DEFAULT_FORK = "istanbul"
+DEFAULT_FORK = "london"
 
 """
     Example use::
@@ -976,6 +976,14 @@ istanbul_instruction_table = InstructionTable(  # type: ignore
     istanbul_instruction_table, previous_fork=serenity_instruction_table
 )
 
+london_instruction_table = {  
+    0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")
+}
+
+london_instruction_table = InstructionTable(  # type: ignore
+    london_instruction_table, previous_fork=istanbul_instruction_table
+)
+
 accepted_forks = (
     "frontier",
     "homestead",
@@ -986,6 +994,7 @@ accepted_forks = (
     "petersburg",
     "serenity",
     "istanbul",
+    "london"
 )
 
 
@@ -999,6 +1008,7 @@ instruction_tables = {
     "petersburg": constantinople_instruction_table,  # constantinople table is intentional here: those two are aliases
     "serenity": serenity_instruction_table,
     "istanbul": istanbul_instruction_table,
+    "london": london_instruction_table
 }
 
 
@@ -1032,6 +1042,7 @@ def block_to_fork(block_number):
         # 7280000: "constantinople", # Same Block as petersburg, commented to avoid conflicts
         7280000: "petersburg",
         9999999: "serenity",  # to be replaced after Serenity launch
+        12965000: "london"
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
