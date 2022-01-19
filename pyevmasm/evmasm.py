@@ -1041,8 +1041,9 @@ def block_to_fork(block_number):
         4370000: "byzantium",
         # 7280000: "constantinople", # Same Block as petersburg, commented to avoid conflicts
         7280000: "petersburg",
-        9999999: "serenity",  # to be replaced after Serenity launch
-        12965000: "london"
+        9069000: "istanbul",
+        12965000: "london",
+        99999999: "serenity"  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
