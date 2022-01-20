@@ -120,6 +120,13 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.fee == 800)
         self.assertTrue(insn.pops == 1)
         self.assertTrue(insn.pushes == 1)
+    
+    def test_london_fork(self):
+        insn = EVMAsm.disassemble_one(b"\x48", fork="london")
+        self.assertTrue(insn.mnemonic == "BASEFEE")
+        self.assertTrue(insn.fee == 2)
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
 
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")

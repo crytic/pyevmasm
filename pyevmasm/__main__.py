@@ -33,8 +33,8 @@ def main():
         "--fork",
         default=DEFAULT_FORK,
         type=str,
-        help="Fork, default: byzantium. "
-        "Possible: frontier, homestead, tangerine_whistle, spurious_dragon, byzantium, constantinople, serenity. "
+        help="Fork, default: london. "
+        "Possible: frontier, homestead, tangerine_whistle, spurious_dragon, byzantium, constantinople, istanbul, london, serenity. "
         "Also an unsigned block number is accepted to select the fork.",
     )
 
