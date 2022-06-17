@@ -15,18 +15,49 @@ from .evmasm import (
 
 
 def main():
-    parser = argparse.ArgumentParser(description="pyevmasm the EVM assembler and disassembler")
+    parser = argparse.ArgumentParser(
+        description="pyevmasm the EVM assembler and disassembler"
+    )
     group_action = parser.add_mutually_exclusive_group(required=True)
-    group_action.add_argument("-a", "--assemble", action="store_true", help="Assemble EVM instructions to opcodes")
-    group_action.add_argument("-d", "--disassemble", action="store_true", help="Disassemble EVM to opcodes")
-    group_action.add_argument("-t", "--print-opcode-table", action="store_true", help="List supported EVM opcodes")
-    parser.add_argument("-bi", "--binary-input", action="store_true", help="Binary input mode (-d only)")
-    parser.add_argument("-bo", "--binary-output", action="store_true", help="Binary output mode (-a only)")
-    parser.add_argument(
-        "-i", "--input", nargs="?", default=sys.stdin, type=argparse.FileType("r"), help="Input file, default=stdin"
+    group_action.add_argument(
+        "-a",
+        "--assemble",
+        action="store_true",
+        help="Assemble EVM instructions to opcodes",
+    )
+    group_action.add_argument(
+        "-d", "--disassemble", action="store_true", help="Disassemble EVM to opcodes"
+    )
+    group_action.add_argument(
+        "-t",
+        "--print-opcode-table",
+        action="store_true",
+        help="List supported EVM opcodes",
     )
     parser.add_argument(
-        "-o", "--output", nargs="?", default=sys.stdout, type=argparse.FileType("w"), help="Output file, default=stdout"
+        "-bi", "--binary-input", action="store_true", help="Binary input mode (-d only)"
+    )
+    parser.add_argument(
+        "-bo",
+        "--binary-output",
+        action="store_true",
+        help="Binary output mode (-a only)",
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        nargs="?",
+        default=sys.stdin,
+        type=argparse.FileType("r"),
+        help="Input file, default=stdin",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        nargs="?",
+        default=sys.stdout,
+        type=argparse.FileType("w"),
+        help="Output file, default=stdout",
     )
     parser.add_argument(
         "-f",
@@ -46,7 +77,8 @@ def main():
             fork = block_to_fork(block_number)
         except ValueError:
             sys.stderr.write(
-                "Wrong fork name or block number. " "Please provide an integer or one of %s.\n" % accepted_forks
+                "Wrong fork name or block number. "
+                "Please provide an integer or one of %s.\n" % accepted_forks
             )
             sys.exit(1)
     else:
@@ -55,7 +87,11 @@ def main():
     instruction_table = instruction_tables[fork]
     if args.print_opcode_table:
         for instr in instruction_table:
-            print("0x{:02x}: {:16s} {:s}".format(instr.opcode, instr.name, instr.description))
+            print(
+                "0x{:02x}: {:16s} {:s}".format(
+                    instr.opcode, instr.name, instr.description
+                )
+            )
         sys.exit(0)
 
     if args.assemble:

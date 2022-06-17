@@ -50,7 +50,18 @@ class ParseError(Exception):
 
 
 class Instruction(object):
-    def __init__(self, opcode, name, operand_size, pops, pushes, fee, description, operand=None, pc=0):
+    def __init__(
+        self,
+        opcode,
+        name,
+        operand_size,
+        pops,
+        pushes,
+        fee,
+        description,
+        operand=None,
+        pc=0,
+    ):
         """
         This represents an EVM instruction.
         EVMAsm will create this for you.
@@ -101,7 +112,7 @@ class Instruction(object):
         self._pc = pc
 
     def __eq__(self, other):
-        """ Instructions are equal if all features match """
+        """Instructions are equal if all features match"""
         return (
             self._opcode == other._opcode
             and self._name == other._name
@@ -138,12 +149,12 @@ class Instruction(object):
 
     @property
     def opcode(self):
-        """ The opcode as an integer """
+        """The opcode as an integer"""
         return self._opcode
 
     @property
     def mnemonic(self):
-        """ Alias for name """
+        """Alias for name"""
         return self.name
 
     @staticmethod
@@ -160,14 +171,14 @@ class Instruction(object):
 
     @property
     def name(self):
-        """ The instruction name/mnemonic """
+        """The instruction name/mnemonic"""
         return self._long_name(self._name, self._operand_size, self._pops)
 
     def parse_operand(self, buf):
-        """ Parses an operand from buf
+        """Parses an operand from buf
 
-            :param buf: a buffer
-            :type buf: iterator/generator/string
+        :param buf: a buffer
+        :type buf: iterator/generator/string
         """
         buf = iter(buf)
         try:
@@ -181,12 +192,12 @@ class Instruction(object):
 
     @property
     def operand_size(self):
-        """ The immediate operand size """
+        """The immediate operand size"""
         return self._operand_size
 
     @property
     def has_operand(self):
-        """ True if the instruction uses an immediate operand"""
+        """True if the instruction uses an immediate operand"""
         return self.operand_size > 0
 
     @property
@@ -198,42 +209,44 @@ class Instruction(object):
         if self.operand_size != 0 and value is not None:
             mask = (1 << self.operand_size * 8) - 1
             if ~mask & value:
-                raise ValueError("operand should be {:d} bits long".format(self.operand_size * 8))
+                raise ValueError(
+                    "operand should be {:d} bits long".format(self.operand_size * 8)
+                )
             self._operand = value
 
     @property
     def pops(self):
-        """ Number words popped from the stack """
+        """Number words popped from the stack"""
         return self._pops
 
     @property
     def pushes(self):
-        """ Number words pushed to the stack """
+        """Number words pushed to the stack"""
         return self._pushes
 
     @property
     def size(self):
-        """ Size of the encoded instruction """
+        """Size of the encoded instruction"""
         return self._operand_size + 1
 
     @property
     def fee(self):
-        """ The basic gas fee of the instruction """
+        """The basic gas fee of the instruction"""
         return self._fee
 
     @property
     def semantics(self):
-        """ Canonical semantics """
+        """Canonical semantics"""
         return self._name
 
     @property
     def description(self):
-        """ Colloquial description of the instruction """
+        """Colloquial description of the instruction"""
         return self._description
 
     @property
     def bytes(self):
-        """ Encoded instruction """
+        """Encoded instruction"""
         b = [bytes([self._opcode])]
         for offset in reversed(range(self.operand_size)):
             b.append(bytes([(self.operand >> offset * 8) & 0xFF]))
@@ -250,7 +263,7 @@ class Instruction(object):
 
     @property
     def group(self):
-        """ Instruction classification as per the yellow paper """
+        """Instruction classification as per the yellow paper"""
         classes = {
             0: "Stop and Arithmetic Operations",
             1: "Comparison & Bitwise Logic Operations",
@@ -269,22 +282,22 @@ class Instruction(object):
 
     @property
     def uses_stack(self):
-        """ True if the instruction reads/writes from/to the stack """
+        """True if the instruction reads/writes from/to the stack"""
         return self.reads_from_stack or self.writes_to_stack
 
     @property
     def reads_from_stack(self):
-        """ True if the instruction reads from stack """
+        """True if the instruction reads from stack"""
         return self.pops > 0
 
     @property
     def writes_to_stack(self):
-        """ True if the instruction writes to the stack """
+        """True if the instruction writes to the stack"""
         return self.pushes > 0
 
     @property
     def writes_to_memory(self):
-        """ True if the instruction writes to memory """
+        """True if the instruction writes to memory"""
         return self.semantics in {
             "MSTORE",
             "MSTORE8",
@@ -300,7 +313,7 @@ class Instruction(object):
 
     @property
     def reads_from_memory(self):
-        """ True if the instruction reads from memory """
+        """True if the instruction reads from memory"""
         return self.semantics in {
             "MLOAD",
             "CREATE",
@@ -314,52 +327,67 @@ class Instruction(object):
 
     @property
     def writes_to_storage(self):
-        """ True if the instruction writes to the storage """
+        """True if the instruction writes to the storage"""
         return self.semantics == "SSTORE"
 
     @property
     def reads_from_storage(self):
-        """ True if the instruction reads from the storage """
+        """True if the instruction reads from the storage"""
         return self.semantics == "SLOAD"
 
     @property
     def is_terminator(self):
-        """ True if the instruction is a basic block terminator """
-        return self.semantics in {"RETURN", "STOP", "INVALID", "JUMP", "JUMPI", "SELFDESTRUCT", "REVERT"}
+        """True if the instruction is a basic block terminator"""
+        return self.semantics in {
+            "RETURN",
+            "STOP",
+            "INVALID",
+            "JUMP",
+            "JUMPI",
+            "SELFDESTRUCT",
+            "REVERT",
+        }
 
     @property
     def is_endtx(self):
-        """ True if the instruction is a transaction terminator """
+        """True if the instruction is a transaction terminator"""
         return self.semantics in {"RETURN", "STOP", "INVALID", "SELFDESTRUCT", "REVERT"}
 
     @property
     def is_starttx(self):
-        """ True if the instruction is a transaction initiator """
-        return self.semantics in {"CREATE", "CREATE2", "CALL", "CALLCODE", "DELEGATECALL", "STATICCALL"}
+        """True if the instruction is a transaction initiator"""
+        return self.semantics in {
+            "CREATE",
+            "CREATE2",
+            "CALL",
+            "CALLCODE",
+            "DELEGATECALL",
+            "STATICCALL",
+        }
 
     @property
     def is_branch(self):
-        """ True if the instruction is a jump """
+        """True if the instruction is a jump"""
         return self.semantics in {"JUMP", "JUMPI"}
 
     @property
     def is_environmental(self):
-        """ True if the instruction access enviromental data """
+        """True if the instruction access enviromental data"""
         return self.group == "Environmental Information"
 
     @property
     def is_system(self):
-        """ True if the instruction is a system operation """
+        """True if the instruction is a system operation"""
         return self.group == "System operations"
 
     @property
     def uses_block_info(self):
-        """ True if the instruction access block information"""
+        """True if the instruction access block information"""
         return self.group == "Block Information"
 
     @property
     def is_arithmetic(self):
-        """ True if the instruction is an arithmetic operation """
+        """True if the instruction is an arithmetic operation"""
         return self.semantics in {
             "ADD",
             "MUL",
@@ -379,20 +407,20 @@ class Instruction(object):
 
 
 def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
-    """ Assemble one EVM instruction from its textual representation.
+    """Assemble one EVM instruction from its textual representation.
 
-        :param asmcode: assembly code for one instruction
-        :type asmcode: str
-        :param pc: program counter of the instruction(optional)
-        :type pc: int
-        :param fork: fork name (optional)
-        :type fork: str
-        :return: An Instruction object
-        :rtype: Instruction
+    :param asmcode: assembly code for one instruction
+    :type asmcode: str
+    :param pc: program counter of the instruction(optional)
+    :type pc: int
+    :param fork: fork name (optional)
+    :type fork: str
+    :return: An Instruction object
+    :rtype: Instruction
 
-        Example use::
+    Example use::
 
-            >>> print assemble_one('LT')
+        >>> print assemble_one('LT')
 
 
     """
@@ -448,20 +476,20 @@ def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
 
 
 def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
-    """ Disassemble a single instruction from a bytecode
+    """Disassemble a single instruction from a bytecode
 
-        :param bytecode: the bytecode stream
-        :type bytecode: str | bytes | bytearray | iterator
-        :param pc: program counter of the instruction(optional)
-        :type pc: int
-        :param fork: fork name (optional)
-        :type fork: str
-        :return: an Instruction object
-        :rtype: Instruction
+    :param bytecode: the bytecode stream
+    :type bytecode: str | bytes | bytearray | iterator
+    :param pc: program counter of the instruction(optional)
+    :type pc: int
+    :param fork: fork name (optional)
+    :type fork: str
+    :return: an Instruction object
+    :rtype: Instruction
 
-        Example use::
+    Example use::
 
-            >>> print disassemble_one('\x60\x10')
+        >>> print disassemble_one('\x60\x10')
 
     """
     instruction_table = instruction_tables[fork]
@@ -480,7 +508,9 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
 
     instruction = copy.copy(instruction_table.get(opcode, None))
     if instruction is None:
-        instruction = Instruction(opcode, "INVALID", 0, 0, 0, 0, "Unspecified invalid instruction.")
+        instruction = Instruction(
+            opcode, "INVALID", 0, 0, 0, 0, "Unspecified invalid instruction."
+        )
     instruction.pc = pc
 
     try:
@@ -493,33 +523,33 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
 
 
 def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
-    """ Disassemble all instructions in bytecode
+    """Disassemble all instructions in bytecode
 
-        :param bytecode: an evm bytecode (binary)
-        :type bytecode: str | bytes | bytearray | iterator
-        :param pc: program counter of the first instruction(optional)
-        :type pc: int
-        :param fork: fork name (optional)
-        :type fork: str
-        :return: An generator of Instruction objects
-        :rtype: list[Instruction]
+    :param bytecode: an evm bytecode (binary)
+    :type bytecode: str | bytes | bytearray | iterator
+    :param pc: program counter of the first instruction(optional)
+    :type pc: int
+    :param fork: fork name (optional)
+    :type fork: str
+    :return: An generator of Instruction objects
+    :rtype: list[Instruction]
 
-        Example use::
+    Example use::
 
-            >>> for inst in disassemble_all(bytecode):
-            ...    print(instr)
+        >>> for inst in disassemble_all(bytecode):
+        ...    print(instr)
 
-            ...
-            PUSH1 0x60
-            PUSH1 0x40
-            MSTORE
-            PUSH1 0x2
-            PUSH2 0x108
-            PUSH1 0x0
-            POP
-            SSTORE
-            PUSH1 0x40
-            MLOAD
+        ...
+        PUSH1 0x60
+        PUSH1 0x40
+        MSTORE
+        PUSH1 0x2
+        PUSH2 0x108
+        PUSH1 0x0
+        POP
+        SSTORE
+        PUSH1 0x40
+        MLOAD
 
 
     """
@@ -538,25 +568,25 @@ def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
 
 
 def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
-    """ Disassemble an EVM bytecode
+    """Disassemble an EVM bytecode
 
-        :param bytecode: binary representation of an evm bytecode
-        :type bytecode: str | bytes | bytearray
-        :param pc: program counter of the first instruction(optional)
-        :type pc: int
-        :param fork: fork name (optional)
-        :type fork: str
-        :return: the text representation of the assembler code
+    :param bytecode: binary representation of an evm bytecode
+    :type bytecode: str | bytes | bytearray
+    :param pc: program counter of the first instruction(optional)
+    :type pc: int
+    :param fork: fork name (optional)
+    :type fork: str
+    :return: the text representation of the assembler code
 
-        Example use::
+    Example use::
 
-            >>> disassemble("\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00")
-            ...
-            PUSH1 0x60
-            BLOCKHASH
-            MSTORE
-            PUSH1 0x2
-            PUSH2 0x100
+        >>> disassemble("\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00")
+        ...
+        PUSH1 0x60
+        BLOCKHASH
+        MSTORE
+        PUSH1 0x2
+        PUSH2 0x100
 
     """
     return "\n".join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
@@ -589,26 +619,26 @@ def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
 
 
 def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
-    """ Disassemble an EVM bytecode
+    """Disassemble an EVM bytecode
 
-        :param bytecode: canonical representation of an evm bytecode (hexadecimal)
-        :type bytecode: str
-        :param pc: program counter of the first instruction(optional)
-        :type pc: int
-        :param fork: fork name (optional)
-        :type fork: str
-        :return: the text representation of the assembler code
-        :rtype: str
+    :param bytecode: canonical representation of an evm bytecode (hexadecimal)
+    :type bytecode: str
+    :param pc: program counter of the first instruction(optional)
+    :type pc: int
+    :param fork: fork name (optional)
+    :type fork: str
+    :return: the text representation of the assembler code
+    :rtype: str
 
-        Example use::
+    Example use::
 
-            >>> disassemble_hex("0x6060604052600261010")
-            ...
-            PUSH1 0x60
-            BLOCKHASH
-            MSTORE
-            PUSH1 0x2
-            PUSH2 0x100
+        >>> disassemble_hex("0x6060604052600261010")
+        ...
+        PUSH1 0x60
+        BLOCKHASH
+        MSTORE
+        PUSH1 0x2
+        PUSH2 0x100
 
     """
     if bytecode.startswith("0x"):
@@ -690,7 +720,10 @@ class InstructionTable:
     def _name_to_opcode(self):
         if self.__name_to_opcode is None:
             self.__name_to_opcode = {}
-            for (opcode, (name, operand_size, pops, pushes, gas, description)) in self._instruction_list.items():
+            for (
+                opcode,
+                (name, operand_size, pops, pushes, gas, description),
+            ) in self._instruction_list.items():
                 long_name = Instruction._long_name(name, operand_size, pops)
                 self.__name_to_opcode[long_name] = opcode
         return self.__name_to_opcode
@@ -744,7 +777,14 @@ frontier_instruction_table = {
     0x8: ("ADDMOD", 0, 3, 1, 8, "Modulo addition operation."),
     0x9: ("MULMOD", 0, 3, 1, 8, "Modulo multiplication operation."),
     0xA: ("EXP", 0, 2, 1, 10, "Exponential operation."),
-    0xB: ("SIGNEXTEND", 0, 2, 1, 5, "Extend length of two's complement signed integer."),
+    0xB: (
+        "SIGNEXTEND",
+        0,
+        2,
+        1,
+        5,
+        "Extend length of two's complement signed integer.",
+    ),
     0x10: ("LT", 0, 2, 1, 3, "Less-than comparision."),
     0x11: ("GT", 0, 2, 1, 3, "Greater-than comparision."),
     0x12: ("SLT", 0, 2, 1, 3, "Signed less-than comparision."),
@@ -770,14 +810,42 @@ frontier_instruction_table = {
         "Get deposited value by the instruction/transaction responsible for this execution.",
     ),
     0x35: ("CALLDATALOAD", 0, 1, 1, 3, "Get input data of current environment."),
-    0x36: ("CALLDATASIZE", 0, 0, 1, 2, "Get size of input data in current environment."),
-    0x37: ("CALLDATACOPY", 0, 3, 0, 3, "Copy input data in current environment to memory."),
+    0x36: (
+        "CALLDATASIZE",
+        0,
+        0,
+        1,
+        2,
+        "Get size of input data in current environment.",
+    ),
+    0x37: (
+        "CALLDATACOPY",
+        0,
+        3,
+        0,
+        3,
+        "Copy input data in current environment to memory.",
+    ),
     0x38: ("CODESIZE", 0, 0, 1, 2, "Get size of code running in current environment."),
-    0x39: ("CODECOPY", 0, 3, 0, 3, "Copy code running in current environment to memory."),
+    0x39: (
+        "CODECOPY",
+        0,
+        3,
+        0,
+        3,
+        "Copy code running in current environment to memory.",
+    ),
     0x3A: ("GASPRICE", 0, 0, 1, 2, "Get price of gas in current environment."),
     0x3B: ("EXTCODESIZE", 0, 1, 1, 20, "Get size of an account's code."),
     0x3C: ("EXTCODECOPY", 0, 4, 0, 20, "Copy an account's code to memory."),
-    0x40: ("BLOCKHASH", 0, 1, 1, 20, "Get the hash of one of the 256 most recent complete blocks."),
+    0x40: (
+        "BLOCKHASH",
+        0,
+        1,
+        1,
+        20,
+        "Get the hash of one of the 256 most recent complete blocks.",
+    ),
     0x41: ("COINBASE", 0, 0, 1, 2, "Get the block's beneficiary address."),
     0x42: ("TIMESTAMP", 0, 0, 1, 2, "Get the block's timestamp."),
     0x43: ("NUMBER", 0, 0, 1, 2, "Get the block's number."),
@@ -791,7 +859,14 @@ frontier_instruction_table = {
     0x55: ("SSTORE", 0, 2, 0, 0, "Save word to storage."),
     0x56: ("JUMP", 0, 1, 0, 8, "Alter the program counter."),
     0x57: ("JUMPI", 0, 2, 0, 10, "Conditionally alter the program counter."),
-    0x58: ("GETPC", 0, 0, 1, 2, "Get the value of the program counter prior to the increment."),
+    0x58: (
+        "GETPC",
+        0,
+        0,
+        1,
+        2,
+        "Get the value of the program counter prior to the increment.",
+    ),
     0x59: ("MSIZE", 0, 0, 1, 2, "Get the size of active memory in bytes."),
     0x5A: (
         "GAS",
@@ -873,10 +948,24 @@ frontier_instruction_table = {
     0xA4: ("LOG", 0, 6, 0, 1875, "Append log record with four topics."),
     0xF0: ("CREATE", 0, 3, 1, 32000, "Create a new account with associated code."),
     0xF1: ("CALL", 0, 7, 1, 40, "Message-call into an account."),
-    0xF2: ("CALLCODE", 0, 7, 1, 40, "Message-call into this account with alternative account's code."),
+    0xF2: (
+        "CALLCODE",
+        0,
+        7,
+        1,
+        40,
+        "Message-call into this account with alternative account's code.",
+    ),
     0xF3: ("RETURN", 0, 2, 0, 0, "Halt execution returning output data."),
     0xFE: ("INVALID", 0, 0, 0, 0, "Designated invalid instruction."),
-    0xFF: ("SELFDESTRUCT", 0, 1, 0, 0, "Halt execution and register account for later deletion."),
+    0xFF: (
+        "SELFDESTRUCT",
+        0,
+        1,
+        0,
+        0,
+        "Halt execution and register account for later deletion.",
+    ),
 }
 frontier_instruction_table = InstructionTable(frontier_instruction_table)  # type: ignore
 
@@ -901,7 +990,14 @@ tangerine_whistle_instruction_table = {
     0x54: ("SLOAD", 0, 1, 1, 200, "Load word from storage."),
     0xF0: ("CREATE", 0, 3, 1, 32000, "Create a new account with associated code."),
     0xF1: ("CALL", 0, 7, 1, 700, "Message-call into an account."),
-    0xF2: ("CALLCODE", 0, 7, 1, 700, "Message-call into this account with alternative account's code."),
+    0xF2: (
+        "CALLCODE",
+        0,
+        7,
+        1,
+        700,
+        "Message-call into this account with alternative account's code.",
+    ),
     0xF4: (
         "DELEGATECALL",
         0,
@@ -910,7 +1006,14 @@ tangerine_whistle_instruction_table = {
         700,
         "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
     ),
-    0xFF: ("SELFDESTRUCT", 0, 1, 0, 5000, "Halt execution and register account for later deletion."),
+    0xFF: (
+        "SELFDESTRUCT",
+        0,
+        1,
+        0,
+        5000,
+        "Halt execution and register account for later deletion.",
+    ),
 }
 tangerine_whistle_instruction_table = InstructionTable(  # type: ignore
     tangerine_whistle_instruction_table, previous_fork=homestead_instruction_table
@@ -930,7 +1033,14 @@ byzantium_instruction_table = {
         2,
         "Get size of output data from the previous call from the current environment.",
     ),
-    0x3E: ("RETURNDATACOPY", 0, 3, 0, 3, "Copy output data from the previous call to memory."),
+    0x3E: (
+        "RETURNDATACOPY",
+        0,
+        3,
+        0,
+        3,
+        "Copy output data from the previous call to memory.",
+    ),
     0xFA: ("STATICCALL", 0, 6, 1, 40, "Static message-call into an account."),
     0xFD: (
         "REVERT",
@@ -963,7 +1073,9 @@ constantinople_instruction_table = InstructionTable(  # type: ignore
     constantinople_instruction_table, previous_fork=byzantium_instruction_table
 )
 
-serenity_instruction_table = InstructionTable({}, previous_fork=constantinople_instruction_table)
+serenity_instruction_table = InstructionTable(
+    {}, previous_fork=constantinople_instruction_table
+)
 
 istanbul_instruction_table = {
     0x31: ("BALANCE", 0, 1, 1, 700, "Get balance of the given account."),
@@ -976,9 +1088,7 @@ istanbul_instruction_table = InstructionTable(  # type: ignore
     istanbul_instruction_table, previous_fork=serenity_instruction_table
 )
 
-london_instruction_table = {  
-    0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")
-}
+london_instruction_table = {0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")}
 
 london_instruction_table = InstructionTable(  # type: ignore
     london_instruction_table, previous_fork=istanbul_instruction_table
@@ -994,7 +1104,7 @@ accepted_forks = (
     "petersburg",
     "serenity",
     "istanbul",
-    "london"
+    "london",
 )
 
 
@@ -1008,29 +1118,29 @@ instruction_tables = {
     "petersburg": constantinople_instruction_table,  # constantinople table is intentional here: those two are aliases
     "serenity": serenity_instruction_table,
     "istanbul": istanbul_instruction_table,
-    "london": london_instruction_table
+    "london": london_instruction_table,
 }
 
 
 def block_to_fork(block_number):
-    """ Convert block number to fork name.
+    """Convert block number to fork name.
 
-        :param block_number: block number
-        :type block_number: int
-        :return: fork name
-        :rtype: str
+    :param block_number: block number
+    :type block_number: int
+    :return: fork name
+    :rtype: str
 
-        Example use::
+    Example use::
 
-            >>> block_to_fork(0)
-            ...
-            "frontier"
-            >>> block_to_fork(4370000)
-            ...
-            "byzantium"
-            >>> block_to_fork(4370001)
-            ...
-            "byzantium"
+        >>> block_to_fork(0)
+        ...
+        "frontier"
+        >>> block_to_fork(4370000)
+        ...
+        "byzantium"
+        >>> block_to_fork(4370001)
+        ...
+        "byzantium"
     """
     forks_by_block = {
         0: "frontier",
@@ -1043,7 +1153,7 @@ def block_to_fork(block_number):
         7280000: "petersburg",
         9069000: "istanbul",
         12965000: "london",
-        99999999: "serenity"  # to be replaced after Serenity launch
+        99999999: "serenity",  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
