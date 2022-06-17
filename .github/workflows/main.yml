@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Set up Python 3.6
-      uses: actions/setup-python@v1
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v4
       with:
-        python-version: 3.6
+        python-version: 3.7
     - name: Lint
       if: github.event_name == 'pull_request'
       env:
@@ -25,7 +25,7 @@ jobs:
         pip install mypy
         python setup.py install
         black --version
-        git diff --name-only $BASE_SHA..$HEAD_SHA | grep "*.py" | xargs black --diff --check
+        black pyevmasm
         mypy --version
         mypy pyevmasm
         
@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 3.7
     - name: Run Tests 37
@@ -51,7 +51,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python 2.7
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 2.7
     - name: Run Tests 27
