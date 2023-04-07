@@ -790,7 +790,7 @@ frontier_instruction_table = {
     0x12: ("SLT", 0, 2, 1, 3, "Signed less-than comparision."),
     0x13: ("SGT", 0, 2, 1, 3, "Signed greater-than comparision."),
     0x14: ("EQ", 0, 2, 1, 3, "Equality comparision."),
-    0x15: ("ISZERO", 0, 1, 1, 3, "Equality to zero comparison."),
+    0x15: ("ISZERO", 0, 1, 1, 3, "Equals zero comparison."),
     0x16: ("AND", 0, 2, 1, 3, "Bitwise AND operation."),
     0x17: ("OR", 0, 2, 1, 3, "Bitwise OR operation."),
     0x18: ("XOR", 0, 2, 1, 3, "Bitwise XOR operation."),
