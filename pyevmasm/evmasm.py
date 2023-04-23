@@ -4,8 +4,14 @@ from builtins import map, next, range, object
 
 from future.builtins import next, bytes  # type: ignore
 import copy
+from cbor2 import loads
 
 DEFAULT_FORK = "london"
+SOLC_METADATA_PATTERNS = [
+    [0xA1, 0x65, 0x62, 0x7A, 0x7A, 0x72, 0x30], # bzzr0
+    [0xA1, 0x65, 0x62, 0x7A, 0x7A, 0x72, 0x31], # bzzr1
+    [0xA2, 0x64, 0x69, 0x70, 0x66, 0x73] # ipfs
+]
 
 """
     Example use::
@@ -557,10 +563,12 @@ def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
         bytecode = bytearray(bytecode)
     if isinstance(bytecode, str):
         bytecode = bytearray(bytecode.encode("latin-1"))
+    
+    stripped_bytecode = strip_metadata(bytecode)
 
-    bytecode = iter(bytecode)
+    stripped_bytecode = iter(stripped_bytecode)
     while True:
-        instr = disassemble_one(bytecode, pc=pc, fork=fork)
+        instr = disassemble_one(stripped_bytecode, pc=pc, fork=fork)
         if not instr:
             return
         pc += instr.size
@@ -590,6 +598,53 @@ def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
 
     """
     return "\n".join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
+
+    """ Find start and end indices of a sublist in list
+
+        :param sublist: a sublist to look for
+        :type sublist: list
+        :param list: a list to look in
+        :type list: list
+        :return: start and end indices of a sublist in list
+    """
+def _find_sub_list(sublist,list):
+    len_sublist=len(sublist)
+    for index in (i for i,e in enumerate(list) if e==sublist[0]):
+        if list[index:index+len_sublist]==sublist:
+            return index,index+len_sublist-1
+
+    """ Try to decode a list of bytes as CBOR data
+
+        :param potential_cbor: a candidate list of bytes for decoding
+        :type potential_cbor: list
+        :return: True if decoding was successful | False otherwise
+    """
+def _try_cbor(potential_cbor):
+    try:
+        cbor = loads(bytes(potential_cbor))
+        if len(cbor) > 0:
+            print("Found CBOR encoded metadata: {}".format(cbor))
+            return True
+        else:
+            return False
+    except Exception as e:
+        return False
+
+    """ Try to decode and strip the solc metadata from the bytecode
+
+        :param bytecode: binary representation of an evm bytecode
+        :type bytecode: bytearray
+        :return: the stripped bytecode representation excluding the metadata part
+    """
+def strip_metadata(bytecode):
+    bytecode_array = list(bytecode)
+    for pattern in SOLC_METADATA_PATTERNS:
+        sublist_indices = _find_sub_list(pattern, bytecode_array)
+        if sublist_indices:
+            potential_cbor = bytecode_array[sublist_indices[0]:]
+            if _try_cbor(potential_cbor):
+                return bytecode_array[:sublist_indices[0]]
+    return bytecode_array
 
 
 def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
