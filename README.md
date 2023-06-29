@@ -2,7 +2,7 @@
 [![Build Status](https://github.com/crytic/pyevmasm/workflows/CI/badge.svg)](https://github.com/crytic/pyevmasm/actions?query=workflow%3ACI)
 
 [![PyPI version](https://badge.fury.io/py/pyevmasm.svg)](https://badge.fury.io/py/pyevmasm)
-[![Slack Status](https://empireslacking.herokuapp.com/badge.svg)](https://empireslacking.herokuapp.com)
+[![Slack Status](https://slack.empirehacking.nyc/badge.svg)](https://slack.empirehacking.nyc)
 
 pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machine (EVM). It includes a commandline utility and a Python API.
 
@@ -93,4 +93,4 @@ python setup.py install --user
 
 [https://pyevmasm.readthedocs.io](https://pyevmasm.readthedocs.io)
 
-New issues, feature requests, and contributions are welcome. Join us in #ethereum channel on the [Empire Hacking Slack](https://empireslacking.herokuapp.com) to discuss Ethereum security tool development.
+New issues, feature requests, and contributions are welcome. Join us in #ethereum channel on the [Empire Hacking Slack](https://slack.empirehacking.nyc) to discuss Ethereum security tool development.
