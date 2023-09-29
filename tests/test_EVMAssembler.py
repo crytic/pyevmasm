@@ -128,6 +128,14 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 0)
         self.assertTrue(insn.pushes == 1)
 
+    def test_shanghai_fork(self):
+        insn = EVMAsm.disassemble_one(b"\x5f", fork="shanghai")
+        self.assertTrue(insn.mnemonic == "PUSH0")
+        self.assertTrue(insn.fee == 2)
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.operand_size == 0)
+
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")
         self.assertEqual(insn.mnemonic, "DUP1")
