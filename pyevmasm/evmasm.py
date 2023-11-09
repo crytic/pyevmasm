@@ -315,6 +315,7 @@ class Instruction(object):
     def reads_from_memory(self):
         """True if the instruction reads from memory"""
         return self.semantics in {
+            "SHA3",
             "MLOAD",
             "CREATE",
             "CALL",

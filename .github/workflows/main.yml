@@ -43,19 +43,3 @@ jobs:
       run: |
         python setup.py install
         python -m unittest discover "tests/"
-
-  test27:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python 2.7
-      uses: actions/setup-python@v4
-      with:
-        python-version: 2.7
-    - name: Run Tests 27
-      run: |
-        python setup.py install
-        python -m unittest discover "tests/"
-
