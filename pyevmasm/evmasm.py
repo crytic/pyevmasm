@@ -1103,7 +1103,20 @@ shanghai_instruction_table = InstructionTable(  # type: ignore
     shanghai_instruction_table, previous_fork=london_instruction_table
 )
 
-dencun_instruction_table = {0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas.")}
+dencun_instruction_table = {
+    0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas."),
+    0x49: ("BLOBHASH", 0, 1, 1, 1, "Get versioned hashes."),
+    0x4A: (
+        "BLOBBASEFEE",
+        0,
+        0,
+        1,
+        2,
+        "Returns the value of the blob base-fee of the current block.",
+    ),
+    0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage."),
+    0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage."),
+}
 
 dencun_instruction_table = InstructionTable(  # type: ignore
     dencun_instruction_table, previous_fork=shanghai_instruction_table

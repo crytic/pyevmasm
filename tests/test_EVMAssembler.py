@@ -144,6 +144,18 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pushes == 0)
         self.assertTrue(insn.operand_size == 0)
 
+        insn = EVMAsm.disassemble_one(b"\x49", fork="dencun")
+        self.assertTrue(insn.mnemonic == "BLOBHASH")
+
+        insn = EVMAsm.disassemble_one(b"\x4a", fork="dencun")
+        self.assertTrue(insn.mnemonic == "BLOBBASEFEE")
+
+        insn =  EVMAsm.disassemble_one(b"\x5c", fork="dencun")
+        self.assertTrue(insn.mnemonic=="TLOAD")
+
+        insn =  EVMAsm.disassemble_one(b"\x5d", fork="dencun")
+        self.assertTrue(insn.mnemonic=="TSTORE")
+
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")
         self.assertEqual(insn.mnemonic, "DUP1")
