@@ -5,7 +5,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes  # type: ignore
 import copy
 
-DEFAULT_FORK = "shanghai"
+DEFAULT_FORK = "dencun"
 
 """
     Example use::
@@ -1095,10 +1095,31 @@ london_instruction_table = InstructionTable(  # type: ignore
     london_instruction_table, previous_fork=istanbul_instruction_table
 )
 
-shanghai_instruction_table = {0x5f: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")}
+shanghai_instruction_table = {
+    0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")
+}
 
 shanghai_instruction_table = InstructionTable(  # type: ignore
     shanghai_instruction_table, previous_fork=london_instruction_table
+)
+
+dencun_instruction_table = {
+    0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas."),
+    0x49: ("BLOBHASH", 0, 1, 1, 1, "Get versioned hashes."),
+    0x4A: (
+        "BLOBBASEFEE",
+        0,
+        0,
+        1,
+        2,
+        "Returns the value of the blob base-fee of the current block.",
+    ),
+    0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage."),
+    0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage."),
+}
+
+dencun_instruction_table = InstructionTable(  # type: ignore
+    dencun_instruction_table, previous_fork=shanghai_instruction_table
 )
 
 accepted_forks = (
@@ -1112,7 +1133,8 @@ accepted_forks = (
     "serenity",
     "istanbul",
     "london",
-    "shanghai"
+    "shanghai",
+    "dencun",
 )
 
 
@@ -1128,6 +1150,7 @@ instruction_tables = {
     "istanbul": istanbul_instruction_table,
     "london": london_instruction_table,
     "shanghai": shanghai_instruction_table,
+    "dencun": dencun_instruction_table,
 }
 
 
