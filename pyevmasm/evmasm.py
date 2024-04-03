@@ -5,7 +5,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes  # type: ignore
 import copy
 
-DEFAULT_FORK = "shanghai"
+DEFAULT_FORK = "dencun"
 
 """
     Example use::
@@ -1095,10 +1095,18 @@ london_instruction_table = InstructionTable(  # type: ignore
     london_instruction_table, previous_fork=istanbul_instruction_table
 )
 
-shanghai_instruction_table = {0x5f: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")}
+shanghai_instruction_table = {
+    0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")
+}
 
 shanghai_instruction_table = InstructionTable(  # type: ignore
     shanghai_instruction_table, previous_fork=london_instruction_table
+)
+
+dencun_instruction_table = {0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas.")}
+
+dencun_instruction_table = InstructionTable(  # type: ignore
+    dencun_instruction_table, previous_fork=shanghai_instruction_table
 )
 
 accepted_forks = (
@@ -1112,7 +1120,8 @@ accepted_forks = (
     "serenity",
     "istanbul",
     "london",
-    "shanghai"
+    "shanghai",
+    "dencun",
 )
 
 
@@ -1128,6 +1137,7 @@ instruction_tables = {
     "istanbul": istanbul_instruction_table,
     "london": london_instruction_table,
     "shanghai": shanghai_instruction_table,
+    "dencun": dencun_instruction_table,
 }
 
 

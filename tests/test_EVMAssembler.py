@@ -135,6 +135,14 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 0)
         self.assertTrue(insn.pushes == 1)
         self.assertTrue(insn.operand_size == 0)
+    
+    def test_dencun_fork(self):
+        insn = EVMAsm.disassemble_one(b"\x5e", fork="dencun")
+        self.assertTrue(insn.mnemonic == "MCOPY")
+        self.assertTrue(insn.fee == 3)
+        self.assertTrue(insn.pops == 3)
+        self.assertTrue(insn.pushes == 0)
+        self.assertTrue(insn.operand_size == 0)
 
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")
