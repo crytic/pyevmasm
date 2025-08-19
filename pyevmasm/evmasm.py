@@ -989,9 +989,7 @@ homestead_instruction_table = {
         "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
     )
 }
-homestead_instruction_table = InstructionTable(  # type: ignore
-    homestead_instruction_table, previous_fork=frontier_instruction_table
-)
+homestead_instruction_table = InstructionTable(homestead_instruction_table, previous_fork=frontier_instruction_table)  # type: ignore
 
 tangerine_whistle_instruction_table = {
     0x3B: ("EXTCODESIZE", 0, 1, 1, 700, "Get size of an account's code."),
@@ -1025,14 +1023,10 @@ tangerine_whistle_instruction_table = {
         "Halt execution and register account for later deletion.",
     ),
 }
-tangerine_whistle_instruction_table = InstructionTable(  # type: ignore
-    tangerine_whistle_instruction_table, previous_fork=homestead_instruction_table
-)
+tangerine_whistle_instruction_table = InstructionTable(tangerine_whistle_instruction_table, previous_fork=homestead_instruction_table)  # type: ignore
 
 spurious_dragon_instruction_table = {}  # type: ignore
-spurious_dragon_instruction_table = InstructionTable(  # type: ignore
-    spurious_dragon_instruction_table, previous_fork=tangerine_whistle_instruction_table
-)
+spurious_dragon_instruction_table = InstructionTable(spurious_dragon_instruction_table, previous_fork=tangerine_whistle_instruction_table)  # type: ignore
 
 byzantium_instruction_table = {
     0x3D: (
@@ -1061,9 +1055,7 @@ byzantium_instruction_table = {
         "Stop execution and revert state changes, without consuming all provided gas and providing a reason.",
     ),
 }
-byzantium_instruction_table = InstructionTable(  # type: ignore
-    byzantium_instruction_table, previous_fork=spurious_dragon_instruction_table
-)
+byzantium_instruction_table = InstructionTable(byzantium_instruction_table, previous_fork=spurious_dragon_instruction_table)  # type: ignore
 
 constantinople_instruction_table = {
     0x1B: ("SHL", 0, 2, 1, 3, "Shift left."),
@@ -1079,9 +1071,7 @@ constantinople_instruction_table = {
         "Behaves identically to CREATE, except using keccak256( 0xff ++ address ++ salt ++ keccak256(init_code)))[12:] as the address where the contract is initialized at",
     ),
 }
-constantinople_instruction_table = InstructionTable(  # type: ignore
-    constantinople_instruction_table, previous_fork=byzantium_instruction_table
-)
+constantinople_instruction_table = InstructionTable(constantinople_instruction_table, previous_fork=byzantium_instruction_table)  # type: ignore
 
 serenity_instruction_table = InstructionTable(
     {}, previous_fork=constantinople_instruction_table
@@ -1094,23 +1084,17 @@ istanbul_instruction_table = {
     0x47: ("SELFBALANCE", 0, 0, 1, 5, "Balance of the current address."),
     0x54: ("SLOAD", 0, 1, 1, 800, "Load word from storage."),
 }
-istanbul_instruction_table = InstructionTable(  # type: ignore
-    istanbul_instruction_table, previous_fork=serenity_instruction_table
-)
+istanbul_instruction_table = InstructionTable(istanbul_instruction_table, previous_fork=serenity_instruction_table)  # type: ignore
 
 london_instruction_table = {0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")}
 
-london_instruction_table = InstructionTable(  # type: ignore
-    london_instruction_table, previous_fork=istanbul_instruction_table
-)
+london_instruction_table = InstructionTable(london_instruction_table, previous_fork=istanbul_instruction_table)  # type: ignore
 
 shanghai_instruction_table = {
     0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")
 }
 
-shanghai_instruction_table = InstructionTable(  # type: ignore
-    shanghai_instruction_table, previous_fork=london_instruction_table
-)
+shanghai_instruction_table = InstructionTable(shanghai_instruction_table, previous_fork=london_instruction_table)  # type: ignore
 
 cancun_instruction_table = {
     0x49: ("BLOBHASH", 0, 1, 1, 3, "Get versioned hashes"),
@@ -1127,9 +1111,7 @@ cancun_instruction_table = {
     0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
 }
 
-cancun_instruction_table = InstructionTable(  # type: ignore
-    cancun_instruction_table, previous_fork=shanghai_instruction_table
-)
+cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
 
 accepted_forks = (
     "frontier",

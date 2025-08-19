@@ -9,6 +9,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
     - uses: actions/checkout@v5
     - name: Set up Python 3.8
@@ -16,7 +17,6 @@ jobs:
       with:
         python-version: 3.8
     - name: Lint
-      if: github.event_name == 'pull_request'
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -25,7 +25,7 @@ jobs:
         pip install mypy
         pip install -e .
         black --version
-        black pyevmasm
+        black --check pyevmasm
         mypy --version
         mypy pyevmasm
         
