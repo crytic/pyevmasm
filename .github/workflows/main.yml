@@ -23,7 +23,7 @@ jobs:
       run: |
         pip install black
         pip install mypy
-        python setup.py install
+        pip install -e .
         black --version
         black pyevmasm
         mypy --version
@@ -41,5 +41,5 @@ jobs:
         python-version: 3.8
     - name: Run Tests 38
       run: |
-        python setup.py install
+        pip install -e .
         python -m unittest discover "tests/"
