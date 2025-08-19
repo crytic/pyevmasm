@@ -19,12 +19,18 @@ class EVMTest_Assembler(unittest.TestCase):
     def test_ADD_1(self):
         instruction = EVMAsm.disassemble_one(b"\x60\x10")
         self.assertEqual(
-            EVMAsm.Instruction(0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0), instruction
+            EVMAsm.Instruction(
+                0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0
+            ),
+            instruction,
         )
 
         instruction = EVMAsm.assemble_one("PUSH1 0x10")
         self.assertEqual(
-            instruction, EVMAsm.Instruction(0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0)
+            instruction,
+            EVMAsm.Instruction(
+                0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0
+            ),
         )
 
         instructions1 = EVMAsm.disassemble_all(b"\x30\x31")
@@ -44,7 +50,9 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertEqual(bytecode, "0x608040526002610100")
 
         asmcode = EVMAsm.disassemble_hex("0x608040526002610100")
-        self.assertEqual(asmcode, """PUSH1 0x80\nBLOCKHASH\nMSTORE\nPUSH1 0x2\nPUSH2 0x100""")
+        self.assertEqual(
+            asmcode, """PUSH1 0x80\nBLOCKHASH\nMSTORE\nPUSH1 0x2\nPUSH2 0x100"""
+        )
 
     def test_STOP(self):
         insn = EVMAsm.disassemble_one(b"\x00")
@@ -75,7 +83,9 @@ class EVMTest_Assembler(unittest.TestCase):
         insn = EVMAsm.disassemble_one(b"\x1d", fork="byzantium")
         self.assertTrue(insn.mnemonic == "INVALID")  # SAR added in constantinople
         insn = EVMAsm.disassemble_one(b"\x3f", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "INVALID")  # EXTCODEHASH added in constantinople
+        self.assertTrue(
+            insn.mnemonic == "INVALID"
+        )  # EXTCODEHASH added in constantinople
         insn = EVMAsm.disassemble_one(b"\xf5", fork="byzantium")
         self.assertTrue(insn.mnemonic == "INVALID")  # CREATE2 added in constantinople
 
@@ -120,7 +130,7 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.fee == 800)
         self.assertTrue(insn.pops == 1)
         self.assertTrue(insn.pushes == 1)
-    
+
     def test_london_fork(self):
         insn = EVMAsm.disassemble_one(b"\x48", fork="london")
         self.assertTrue(insn.mnemonic == "BASEFEE")
@@ -173,9 +183,13 @@ class EVMTest_Assembler(unittest.TestCase):
         log0_opcode = 0xA0
         for n in range(5):
             opcode = log0_opcode + n
-            self.assertTrue(opcode in inst_table, "{!r} not in instruction_table".format(opcode))
+            self.assertTrue(
+                opcode in inst_table, "{!r} not in instruction_table".format(opcode)
+            )
             asm = "LOG" + str(n)
-            self.assertTrue(asm in inst_table, "{!r} not in instruction_table".format(asm))
+            self.assertTrue(
+                asm in inst_table, "{!r} not in instruction_table".format(asm)
+            )
             insn = EVMAsm.assemble_one(asm)
             self.assertEqual(insn.mnemonic, asm)
             self.assertEqual(insn.opcode, opcode)
