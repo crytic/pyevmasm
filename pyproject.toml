@@ -44,11 +44,12 @@ test = ["nose", "coverage"]
 packages = ["pyevmasm"]
 
 [tool.black]
-line-length = 160
+line-length = 88
 target-version = ['py38']
 
 [tool.flake8]
-max-line-length = 160
+max-line-length = 88
+extend-ignore = "E501"
 exclude = [".tox", ".*.egg", ".git", "docs/", "examples/", "scripts/", "tests/", ".venv/"]
 
 [tool.coverage.run]
