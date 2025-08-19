@@ -5,7 +5,7 @@ from builtins import map, next, range, object
 from future.builtins import next, bytes  # type: ignore
 import copy
 
-DEFAULT_FORK = "shanghai"
+DEFAULT_FORK = "cancun"
 
 """
     Example use::
@@ -299,6 +299,7 @@ class Instruction(object):
     def writes_to_memory(self):
         """True if the instruction writes to memory"""
         return self.semantics in {
+            "MCOPY",
             "MSTORE",
             "MSTORE8",
             "CALLDATACOPY",
@@ -316,6 +317,7 @@ class Instruction(object):
         """True if the instruction reads from memory"""
         return self.semantics in {
             "SHA3",
+            "MCOPY",
             "MLOAD",
             "CREATE",
             "CALL",
@@ -335,6 +337,16 @@ class Instruction(object):
     def reads_from_storage(self):
         """True if the instruction reads from the storage"""
         return self.semantics == "SLOAD"
+
+    @property
+    def writes_to_transient_storage(self):
+        """True if the instruction writes to the transient storage"""
+        return self.semantics == "TSTORE"
+
+    @property
+    def reads_from_transient_storage(self):
+        """True if the instruction reads from the transient storage"""
+        return self.semantics == "TLOAD"
 
     @property
     def is_terminator(self):
@@ -1101,6 +1113,25 @@ shanghai_instruction_table = InstructionTable(  # type: ignore
     shanghai_instruction_table, previous_fork=london_instruction_table
 )
 
+cancun_instruction_table = {
+    0x49: ("BLOBHASH", 0, 1, 1, 3, "Get versioned hashes"),
+    0x4A: (
+        "BLOBBASEFEE",
+        0,
+        0,
+        1,
+        2,
+        "Returns the value of the blob base-fee of the current block",
+    ),
+    0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage"),
+    0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage"),
+    0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
+}
+
+cancun_instruction_table = InstructionTable(  # type: ignore
+    cancun_instruction_table, previous_fork=shanghai_instruction_table
+)
+
 accepted_forks = (
     "frontier",
     "homestead",
@@ -1112,7 +1143,8 @@ accepted_forks = (
     "serenity",
     "istanbul",
     "london",
-    "shanghai"
+    "shanghai",
+    "cancun",
 )
 
 
@@ -1128,6 +1160,7 @@ instruction_tables = {
     "istanbul": istanbul_instruction_table,
     "london": london_instruction_table,
     "shanghai": shanghai_instruction_table,
+    "cancun": cancun_instruction_table,
 }
 
 
@@ -1163,6 +1196,7 @@ def block_to_fork(block_number):
         9069000: "istanbul",
         12965000: "london",
         17034870: "shanghai",
+        19426587: "cancun",
         99999999: "serenity",  # to be replaced after Serenity launch
     }
     fork_names = list(forks_by_block.values())
