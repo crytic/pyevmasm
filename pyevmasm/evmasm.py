@@ -1,8 +1,5 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
-from builtins import map, next, range, object
-
-from future.builtins import next, bytes  # type: ignore
 import copy
 
 DEFAULT_FORK = "cancun"
