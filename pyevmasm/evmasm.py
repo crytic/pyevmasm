@@ -58,6 +58,7 @@ class Instruction(object):
         description,
         operand=None,
         pc=0,
+        offset=0,
     ):
         """
         This represents an EVM instruction.
@@ -72,6 +73,7 @@ class Instruction(object):
         :param description: textual description of the instruction
         :param operand: optional immediate operand
         :param pc: optional program counter of this instruction in the program
+        :param offset: optional offset of this instruction in the bytecode
 
         Example use::
 
@@ -80,6 +82,7 @@ class Instruction(object):
             >>> print('\tdescription:', instruction.description)
             >>> print('\tgroup:', instruction.group)
             >>> print('\tpc:', instruction.pc)
+            >>> print('\toffset:', instruction.offset)
             >>> print('\tsize:', instruction.size)
             >>> print('\thas_operand:', instruction.has_operand)
             >>> print('\toperand_size:', instruction.operand_size)
@@ -107,6 +110,7 @@ class Instruction(object):
         self._description = description
         self._operand = operand  # Immediate operand if any
         self._pc = pc
+        self._offset = offset
 
     def __eq__(self, other):
         """Instructions are equal if all features match"""
@@ -119,11 +123,12 @@ class Instruction(object):
             and self._pushes == other._pushes
             and self._fee == other._fee
             and self._pc == other._pc
+            and self._offset == other._offset
             and self._description == other._description
         )
 
     def __repr__(self):
-        output = "Instruction(0x{:x}, {}, {:d}, {:d}, {:d}, {:d}, {}, {}, {})".format(
+        output = "Instruction(0x{:x}, {}, {:d}, {:d}, {:d}, {:d}, {}, {}, {}, {})".format(
             self._opcode,
             self._name,
             self._operand_size,
@@ -133,6 +138,7 @@ class Instruction(object):
             self._description,
             self._operand,
             self._pc,
+            self._offset
         )
         return output
 
@@ -257,6 +263,15 @@ class Instruction(object):
     def pc(self, value):
         """Location in the program (optional)"""
         self._pc = value
+
+    @property
+    def offset(self):
+        return self._offset
+    
+    @offset.setter
+    def offset(self, value):
+        """Offset in the bytecode (optional)"""
+        self._offset = value
 
     @property
     def group(self):
@@ -416,13 +431,15 @@ class Instruction(object):
         }
 
 
-def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_one(asmcode, pc=0, offset=0, fork=DEFAULT_FORK):
     """Assemble one EVM instruction from its textual representation.
 
     :param asmcode: assembly code for one instruction
     :type asmcode: str
     :param pc: program counter of the instruction(optional)
     :type pc: int
+    :param offset: offset of the instruction in the bytecode(optional)
+    :type offset: int
     :param fork: fork name (optional)
     :type fork: str
     :return: An Instruction object
@@ -440,6 +457,8 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
         instr = instruction_table[asmcode[0].upper()]
         if pc:
             instr.pc = pc
+        if offset:
+            instr.offset = offset
         if instr.operand_size > 0:
             assert len(asmcode) == 2
             instr.operand = int(asmcode[1], 0)
@@ -448,13 +467,15 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
         raise AssembleError("Something wrong at pc {:d}".format(pc))
 
 
-def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_all(asmcode, pc=0, offset=0, fork=DEFAULT_FORK):
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
         :type asmcode: str
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param offset: offset of the first instruction in the bytecode(optional)
+        :type offset: int
         :param fork: fork name (optional)
         :type fork: str
         :return: An generator of Instruction objects
@@ -480,18 +501,21 @@ def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
     for line in asmcode:
         if not line.strip():
             continue
-        instr = assemble_one(line, pc=pc, fork=fork)
+        instr = assemble_one(line, pc=pc, offset=offset, fork=fork)
         yield instr
         pc += instr.size
+        offset += 1
 
 
-def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_one(bytecode, pc=0, offset=0, fork=DEFAULT_FORK):
     """Disassemble a single instruction from a bytecode
 
     :param bytecode: the bytecode stream
     :type bytecode: str | bytes | bytearray | iterator
     :param pc: program counter of the instruction(optional)
     :type pc: int
+    :param offset: offset of the instruction in the bytecode(optional)
+    :type offset: int
     :param fork: fork name (optional)
     :type fork: str
     :return: an Instruction object
@@ -522,6 +546,7 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
             opcode, "INVALID", 0, 0, 0, 0, "Unspecified invalid instruction."
         )
     instruction.pc = pc
+    instruction.offset = offset
 
     try:
         if instruction.has_operand:
@@ -532,13 +557,15 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
         return instruction
 
 
-def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_all(bytecode, pc=0, offset=0, fork=DEFAULT_FORK):
     """Disassemble all instructions in bytecode
 
     :param bytecode: an evm bytecode (binary)
     :type bytecode: str | bytes | bytearray | iterator
     :param pc: program counter of the first instruction(optional)
     :type pc: int
+    :param offset: offset of the first instruction in the bytecode(optional)
+    :type offset: int
     :param fork: fork name (optional)
     :type fork: str
     :return: An generator of Instruction objects
@@ -570,20 +597,23 @@ def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
 
     bytecode = iter(bytecode)
     while True:
-        instr = disassemble_one(bytecode, pc=pc, fork=fork)
+        instr = disassemble_one(bytecode, pc=pc, offset=offset, fork=fork)
         if not instr:
             return
         pc += instr.size
+        offset += 1
         yield instr
 
 
-def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble(bytecode, pc=0, offset=0, fork=DEFAULT_FORK):
     """Disassemble an EVM bytecode
 
     :param bytecode: binary representation of an evm bytecode
     :type bytecode: str | bytes | bytearray
     :param pc: program counter of the first instruction(optional)
     :type pc: int
+    :param offset: offset of the first instruction in the bytecode(optional)
+    :type offset: int
     :param fork: fork name (optional)
     :type fork: str
     :return: the text representation of the assembler code
@@ -599,16 +629,18 @@ def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
         PUSH2 0x100
 
     """
-    return "\n".join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
+    return "\n".join(map(str, disassemble_all(bytecode, pc=pc, offset=offset, fork=fork)))
 
 
-def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble(asmcode, pc=0, offset=0, fork=DEFAULT_FORK):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
         :type asmcode: str
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param offset: offset of the first instruction in the bytecode(optional)
+        :type offset: int
         :param fork: fork name (optional)
         :type fork: str
         :return: the hex representation of the bytecode
@@ -625,16 +657,18 @@ def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
             ...
             b"\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
     """
-    return b"".join(x.bytes for x in assemble_all(asmcode, pc=pc, fork=fork))
+    return b"".join(x.bytes for x in assemble_all(asmcode, pc=pc, offset=offset, fork=fork))
 
 
-def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_hex(bytecode, pc=0, offset=0, fork=DEFAULT_FORK):
     """Disassemble an EVM bytecode
 
     :param bytecode: canonical representation of an evm bytecode (hexadecimal)
     :type bytecode: str
     :param pc: program counter of the first instruction(optional)
     :type pc: int
+    :param offset: offset of the first instruction in the bytecode(optional)
+    :type offset: int
     :param fork: fork name (optional)
     :type fork: str
     :return: the text representation of the assembler code
@@ -654,16 +688,18 @@ def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
     if bytecode.startswith("0x"):
         bytecode = bytecode[2:]
     bytecode = unhexlify(bytecode)
-    return disassemble(bytecode, pc=pc, fork=fork)
+    return disassemble(bytecode, pc=pc, offset=offset, fork=fork)
 
 
-def assemble_hex(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_hex(asmcode, pc=0, offset=0, fork=DEFAULT_FORK):
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
         :type asmcode: str | iterator[Instruction]
         :param pc: program counter of the first instruction(optional)
         :type pc: int
+        :param offset: offset of the first instruction in the bytecode(optional)
+        :type offset: int
         :param fork: fork name (optional)
         :type fork: str
         :return: the hex representation of the bytecode
@@ -682,7 +718,7 @@ def assemble_hex(asmcode, pc=0, fork=DEFAULT_FORK):
     """
     if isinstance(asmcode, list):
         return "0x" + hexlify(b"".join([x.bytes for x in asmcode])).decode("ascii")
-    return "0x" + hexlify(assemble(asmcode, pc=pc, fork=fork)).decode("ascii")
+    return "0x" + hexlify(assemble(asmcode, pc=pc, offset=offset, fork=fork)).decode("ascii")
 
 
 class InstructionTable:
