@@ -1113,6 +1113,18 @@ cancun_instruction_table = {
 
 cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
 
+prague_instruction_table = {}
+
+prague_instruction_table = InstructionTable(
+    {}, previous_fork=cancun_instruction_table
+) # type: ignore
+
+osaka_instruction_table = {}
+
+osaka_instruction_table = InstructionTable(
+    {}, previous_fork=prague_instruction_table
+) # type: ignore
+
 accepted_forks = (
     "frontier",
     "homestead",
@@ -1126,6 +1138,8 @@ accepted_forks = (
     "london",
     "shanghai",
     "cancun",
+    "prague",
+    "osaka",
 )
 
 
@@ -1142,6 +1156,8 @@ instruction_tables = {
     "london": london_instruction_table,
     "shanghai": shanghai_instruction_table,
     "cancun": cancun_instruction_table,
+    "prague": prague_instruction_table,
+    "osaka": osaka_instruction_table,
 }
 
 
@@ -1178,7 +1194,9 @@ def block_to_fork(block_number):
         12965000: "london",
         17034870: "shanghai",
         19426587: "cancun",
-        99999999: "serenity",  # to be replaced after Serenity launch
+        22431084: "prague",
+        22432084: "osaka", # not accurate, no widely published osaka block
+        15537393: "serenity",  # ethereum transition to proof of stake 15 September 2022
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
