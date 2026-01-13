@@ -173,6 +173,12 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 3)
         self.assertTrue(insn.pushes == 0)
 
+    def test_prague_fork(self):
+        ...
+    
+    def test_osaka_fork(self):
+        ...
+
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")
         self.assertEqual(insn.mnemonic, "DUP1")
