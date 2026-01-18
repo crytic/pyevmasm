@@ -1129,6 +1129,21 @@ cancun_instruction_table = {
     0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage"),
     0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage"),
     0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
+
+    0x20: ("KECCAK256", 0, 2, 1, 30, "Compute Keccak-256 hash."),
+    0x31: ("BALANCE", 0, 1, 1, 100, "Get balance of the given account."),
+    0x3b: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
+    0x3c: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
+    0x3f: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
+    0x44: ("PREVRANDAO", 0, 0, 1, 2, "Get the block's difficulty."),
+    0x54: ("SLOAD", 0, 1, 1, 100, "Load word from storage."),
+    0x55: ("SSTORE", 0, 2, 0, 100, "Save word to storage."),
+    0x58: ("PC", 0, 0, 1, 2, "Get the value of the program counter prior to the increment."),
+    0xf1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
+    0xf2: ("CALLCODE", 0, 7, 1, 100, "Message-call into this account with alternative account's code."),
+    0xf4: ("DELEGATECALL", 0, 6, 1, 100, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
+    0xfa: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
+
 }
 
 cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
