@@ -1,5 +1,7 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
+
+# from typing import Iterable
 import copy
 
 DEFAULT_FORK = "cancun"
@@ -49,15 +51,15 @@ class ParseError(Exception):
 class Instruction(object):
     def __init__(
         self,
-        opcode,
-        name,
-        operand_size,
-        pops,
-        pushes,
-        fee,
-        description,
-        operand=None,
-        pc=0,
+        opcode: int,
+        name: str,
+        operand_size: int,
+        pops: int,
+        pushes: int,
+        fee: int,
+        description: str,
+        operand: int | None = None,
+        pc: int = 0,
     ):
         """
         This represents an EVM instruction.
@@ -155,7 +157,7 @@ class Instruction(object):
         return self.name
 
     @staticmethod
-    def _long_name(short_name, operand_size, pops):
+    def _long_name(short_name: str, operand_size: int, pops: int):
         if short_name == "PUSH":
             return "PUSH{:d}".format(operand_size)
         elif short_name == "DUP":
@@ -171,7 +173,7 @@ class Instruction(object):
         """The instruction name/mnemonic"""
         return self._long_name(self._name, self._operand_size, self._pops)
 
-    def parse_operand(self, buf):
+    def parse_operand(self, buf: bytearray):
         """Parses an operand from buf
 
         :param buf: a buffer
@@ -202,7 +204,7 @@ class Instruction(object):
         return self._operand
 
     @operand.setter
-    def operand(self, value):
+    def operand(self, value: int):
         if self.operand_size != 0 and value is not None:
             mask = (1 << self.operand_size * 8) - 1
             if ~mask & value:
@@ -254,7 +256,7 @@ class Instruction(object):
         return self._pc
 
     @pc.setter
-    def pc(self, value):
+    def pc(self, value: int):
         """Location in the program (optional)"""
         self._pc = value
 
@@ -420,21 +422,19 @@ class Instruction(object):
 
 
 class EthereumObjectFOrmat(object):
-    
+
     def __init__(self):
         self.header = None
         self.types = None
         self.code: list[Instruction] = []
         self.containers: dict = {}
 
-    def assemble(self, bytes):
-        ...
+    def assemble(self, bytes): ...
 
-    def disassemble(self, bytes):
-        ...
+    def disassemble(self, bytes): ...
 
 
-def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruction:
     """Assemble one EVM instruction from its textual representation.
 
     :param asmcode: assembly code for one instruction
@@ -466,7 +466,7 @@ def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
         raise AssembleError("Something wrong at pc {:d}".format(pc))
 
 
-def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_all(asmcode: str, pc: str = 0, fork: str = DEFAULT_FORK):
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
@@ -503,7 +503,10 @@ def assemble_all(asmcode, pc=0, fork=DEFAULT_FORK):
         pc += instr.size
 
 
-def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
+# make the bytecode typed iterable
+def disassemble_one(
+    bytecode: str | bytes, pc: str = 0, fork: str = DEFAULT_FORK
+) -> Instruction:
     """Disassemble a single instruction from a bytecode
 
     :param bytecode: the bytecode stream
@@ -550,7 +553,8 @@ def disassemble_one(bytecode, pc=0, fork=DEFAULT_FORK):
         return instruction
 
 
-def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
+# how to map yield and generator?
+def disassemble_all(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK):
     """Disassemble all instructions in bytecode
 
     :param bytecode: an evm bytecode (binary)
@@ -595,7 +599,7 @@ def disassemble_all(bytecode, pc=0, fork=DEFAULT_FORK):
         yield instr
 
 
-def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """Disassemble an EVM bytecode
 
     :param bytecode: binary representation of an evm bytecode
@@ -648,7 +652,7 @@ def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
     return b"".join(x.bytes for x in assemble_all(asmcode, pc=pc, fork=fork))
 
 
-def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
+def disassemble_hex(bytecode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """Disassemble an EVM bytecode
 
     :param bytecode: canonical representation of an evm bytecode (hexadecimal)
@@ -677,7 +681,7 @@ def disassemble_hex(bytecode, pc=0, fork=DEFAULT_FORK):
     return disassemble(bytecode, pc=pc, fork=fork)
 
 
-def assemble_hex(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble_hex(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
@@ -787,7 +791,7 @@ class InstructionTable:
         for k in self.keys():
             yield Instruction(*((k,) + self._instruction_list[k]))
 
-    def keys(self):
+    def keys(self) -> list:
         return sorted(self._instruction_list.keys())
 
     def __repr__(self):
@@ -997,7 +1001,9 @@ frontier_instruction_table = {
         "Halt execution and register account for later deletion.",
     ),
 }
-frontier_instruction_table = InstructionTable(frontier_instruction_table)  # type: ignore
+frontier_instruction_table: InstructionTable = InstructionTable(
+    frontier_instruction_table
+)
 
 homestead_instruction_table = {
     0xF4: (
@@ -1129,38 +1135,57 @@ cancun_instruction_table = {
     0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage"),
     0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage"),
     0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
-
     0x20: ("KECCAK256", 0, 2, 1, 30, "Compute Keccak-256 hash."),
     0x31: ("BALANCE", 0, 1, 1, 100, "Get balance of the given account."),
-    0x3b: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
-    0x3c: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
-    0x3f: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
+    0x3B: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
+    0x3C: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
+    0x3F: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
     0x44: ("PREVRANDAO", 0, 0, 1, 2, "Get the block's difficulty."),
     0x54: ("SLOAD", 0, 1, 1, 100, "Load word from storage."),
     0x55: ("SSTORE", 0, 2, 0, 100, "Save word to storage."),
-    0x58: ("PC", 0, 0, 1, 2, "Get the value of the program counter prior to the increment."),
-    0xf1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
-    0xf2: ("CALLCODE", 0, 7, 1, 100, "Message-call into this account with alternative account's code."),
-    0xf4: ("DELEGATECALL", 0, 6, 1, 100, "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code."),
-    0xfa: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
-
+    0x58: (
+        "PC",
+        0,
+        0,
+        1,
+        2,
+        "Get the value of the program counter prior to the increment.",
+    ),
+    0xF1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
+    0xF2: (
+        "CALLCODE",
+        0,
+        7,
+        1,
+        100,
+        "Message-call into this account with alternative account's code.",
+    ),
+    0xF4: (
+        "DELEGATECALL",
+        0,
+        6,
+        1,
+        100,
+        "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
+    ),
+    0xFA: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
 }
 
 cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
 
 osaka_instruction_table = {
-    0x1e: ("CLZ", 0, 1, 1, 5, "Count leading zero bits"),
+    0x1E: ("CLZ", 0, 1, 1, 5, "Count leading zero bits"),
 }
 
 osaka_instruction_table = InstructionTable(
     osaka_instruction_table, previous_fork=cancun_instruction_table
-) # type: ignore
+)  # type: ignore
 
 EOF_instruction_table = {}
 
 EOF_instruction_table = InstructionTable(
     {}, previous_fork=cancun_instruction_table
-) # type: ignore
+)  # type: ignore
 
 
 accepted_forks = (
@@ -1232,8 +1257,8 @@ def block_to_fork(block_number):
         12965000: "london",
         17034870: "shanghai",
         19426587: "cancun",
-        22432084: "osaka", # not accurate, no widely published osaka block
-        22431084: "EOF", # not accurate also
+        22432084: "osaka",  # not accurate, no widely published osaka block
+        22431084: "EOF",  # not accurate also
         15537393: "serenity",  # ethereum transition to proof of stake 15 September 2022
     }
     fork_names = list(forks_by_block.values())
