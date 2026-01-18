@@ -416,6 +416,24 @@ class Instruction(object):
         }
 
 
+# add type information
+
+
+class EthereumObjectFOrmat(object):
+    
+    def __init__(self):
+        self.header = None
+        self.types = None
+        self.code: list[Instruction] = []
+        self.containers: dict = {}
+
+    def assemble(self, bytes):
+        ...
+
+    def disassemble(self, bytes):
+        ...
+
+
 def assemble_one(asmcode, pc=0, fork=DEFAULT_FORK):
     """Assemble one EVM instruction from its textual representation.
 
@@ -599,6 +617,7 @@ def disassemble(bytecode, pc=0, fork=DEFAULT_FORK):
         PUSH2 0x100
 
     """
+    # add option for eof
     return "\n".join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
 
 
@@ -625,6 +644,7 @@ def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
             ...
             b"\x60\x60\x60\x40\x52\x60\x02\x61\x01\x00"
     """
+    # add eof support
     return b"".join(x.bytes for x in assemble_all(asmcode, pc=pc, fork=fork))
 
 
@@ -1113,17 +1133,18 @@ cancun_instruction_table = {
 
 cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
 
-prague_instruction_table = {}
-
-prague_instruction_table = InstructionTable(
-    {}, previous_fork=cancun_instruction_table
-) # type: ignore
-
 osaka_instruction_table = {}
 
 osaka_instruction_table = InstructionTable(
-    {}, previous_fork=prague_instruction_table
+    {}, previous_fork=cancun_instruction_table
 ) # type: ignore
+
+EOF_instruction_table = {}
+
+EOF_instruction_table = InstructionTable(
+    {}, previous_fork=cancun_instruction_table
+) # type: ignore
+
 
 accepted_forks = (
     "frontier",
@@ -1138,8 +1159,8 @@ accepted_forks = (
     "london",
     "shanghai",
     "cancun",
-    "prague",
     "osaka",
+    "EOF",
 )
 
 
@@ -1156,8 +1177,8 @@ instruction_tables = {
     "london": london_instruction_table,
     "shanghai": shanghai_instruction_table,
     "cancun": cancun_instruction_table,
-    "prague": prague_instruction_table,
     "osaka": osaka_instruction_table,
+    "EOF": EOF_instruction_table,
 }
 
 
@@ -1194,8 +1215,8 @@ def block_to_fork(block_number):
         12965000: "london",
         17034870: "shanghai",
         19426587: "cancun",
-        22431084: "prague",
         22432084: "osaka", # not accurate, no widely published osaka block
+        22431084: "EOF", # not accurate also
         15537393: "serenity",  # ethereum transition to proof of stake 15 September 2022
     }
     fork_names = list(forks_by_block.values())
