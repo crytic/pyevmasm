@@ -241,13 +241,14 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.fee == 100)
          
 
-    def test_prague_fork(self):
-        # test new and updated opcodes
-        # test assemble
-        # test disassemble
-        ...
-    
     def test_osaka_fork(self):
+        insn = EVMAsm.disassemble_one(b"\x1e", fork="osaka")
+        self.assertTrue(insn.mnemonic == "CLZ")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 5)
+    
+    def test_EOF_fork(self):
         # test new and updated opcodes
         # test assemble
         # test disassemble
