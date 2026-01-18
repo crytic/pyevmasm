@@ -1148,10 +1148,12 @@ cancun_instruction_table = {
 
 cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
 
-osaka_instruction_table = {}
+osaka_instruction_table = {
+    0x1e: ("CLZ", 0, 1, 1, 5, "Count leading zero bits"),
+}
 
 osaka_instruction_table = InstructionTable(
-    {}, previous_fork=cancun_instruction_table
+    osaka_instruction_table, previous_fork=cancun_instruction_table
 ) # type: ignore
 
 EOF_instruction_table = {}
