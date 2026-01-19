@@ -1,7 +1,7 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
 
-# from typing import Iterable
+from typing import Iterator, Any
 import copy
 
 DEFAULT_FORK = "cancun"
@@ -110,8 +110,10 @@ class Instruction(object):
         self._operand = operand  # Immediate operand if any
         self._pc = pc
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Instructions are equal if all features match"""
+        if not isinstance(other, Instruction):
+            return NotImplemented
         return (
             self._opcode == other._opcode
             and self._name == other._name
@@ -124,7 +126,7 @@ class Instruction(object):
             and self._description == other._description
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         output = "Instruction(0x{:x}, {}, {:d}, {:d}, {:d}, {:d}, {}, {}, {})".format(
             self._opcode,
             self._name,
@@ -173,13 +175,13 @@ class Instruction(object):
         """The instruction name/mnemonic"""
         return self._long_name(self._name, self._operand_size, self._pops)
 
-    def parse_operand(self, buf: bytearray):
+    # finc how to make mypy accept type recasting
+    def parse_operand(self, raw_buf: bytearray):
         """Parses an operand from buf
 
         :param buf: a buffer
-        :type buf: iterator/generator/string
         """
-        buf = iter(buf)
+        buf: Iterator = iter(raw_buf)
         try:
             operand = 0
             for _ in range(self.operand_size):
@@ -423,7 +425,7 @@ class Instruction(object):
 
 class EthereumObjectFOrmat(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.header = None
         self.types = None
         self.code: list[Instruction] = []
@@ -438,13 +440,9 @@ def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruc
     """Assemble one EVM instruction from its textual representation.
 
     :param asmcode: assembly code for one instruction
-    :type asmcode: str
     :param pc: program counter of the instruction(optional)
-    :type pc: int
     :param fork: fork name (optional)
-    :type fork: str
     :return: An Instruction object
-    :rtype: Instruction
 
     Example use::
 
@@ -454,29 +452,24 @@ def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruc
     """
     try:
         instruction_table = instruction_tables[fork]
-        asmcode = asmcode.strip().split(" ")
-        instr = instruction_table[asmcode[0].upper()]
+        asmcode_list = asmcode.strip().split(" ")
+        instr = instruction_table[asmcode_list[0].upper()]
         if pc:
             instr.pc = pc
         if instr.operand_size > 0:
-            assert len(asmcode) == 2
-            instr.operand = int(asmcode[1], 0)
+            assert len(asmcode_list) == 2
+            instr.operand = int(asmcode_list[1], 0)
         return instr
     except Exception:
         raise AssembleError("Something wrong at pc {:d}".format(pc))
 
 
-def assemble_all(asmcode: str, pc: str = 0, fork: str = DEFAULT_FORK):
+def assemble_all(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Iterator[Instruction]:
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
-        :type asmcode: str
         :param pc: program counter of the first instruction(optional)
-        :type pc: int
         :param fork: fork name (optional)
-        :type fork: str
-        :return: An generator of Instruction objects
-        :rtype: generator[Instructions]
 
         Example use::
 
@@ -493,9 +486,9 @@ def assemble_all(asmcode: str, pc: str = 0, fork: str = DEFAULT_FORK):
                             ''')
 
     """
-    asmcode = asmcode.split("\n")
-    asmcode = iter(asmcode)
-    for line in asmcode:
+    asmcode_list = asmcode.split("\n")
+    asmcode_iterator = iter(asmcode_list)
+    for line in asmcode_iterator:
         if not line.strip():
             continue
         instr = assemble_one(line, pc=pc, fork=fork)
@@ -505,18 +498,14 @@ def assemble_all(asmcode: str, pc: str = 0, fork: str = DEFAULT_FORK):
 
 # make the bytecode typed iterable
 def disassemble_one(
-    bytecode: str | bytes, pc: str = 0, fork: str = DEFAULT_FORK
-) -> Instruction:
+    bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK
+) -> Instruction | None:
     """Disassemble a single instruction from a bytecode
 
     :param bytecode: the bytecode stream
-    :type bytecode: str | bytes | bytearray | iterator
     :param pc: program counter of the instruction(optional)
-    :type pc: int
     :param fork: fork name (optional)
-    :type fork: str
     :return: an Instruction object
-    :rtype: Instruction
 
     Example use::
 
@@ -533,7 +522,7 @@ def disassemble_one(
     try:
         opcode = next(bytecode)
     except StopIteration:
-        return
+        return None
 
     assert isinstance(opcode, int)
 
@@ -554,17 +543,13 @@ def disassemble_one(
 
 
 # how to map yield and generator?
-def disassemble_all(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK):
+def disassemble_all(bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK) -> Iterator[Instruction]:
     """Disassemble all instructions in bytecode
 
     :param bytecode: an evm bytecode (binary)
-    :type bytecode: str | bytes | bytearray | iterator
     :param pc: program counter of the first instruction(optional)
-    :type pc: int
     :param fork: fork name (optional)
-    :type fork: str
     :return: An generator of Instruction objects
-    :rtype: list[Instruction]
 
     Example use::
 
@@ -599,15 +584,12 @@ def disassemble_all(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK
         yield instr
 
 
-def disassemble(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
+def disassemble(bytecode: str | bytes | bytearray, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """Disassemble an EVM bytecode
 
     :param bytecode: binary representation of an evm bytecode
-    :type bytecode: str | bytes | bytearray
     :param pc: program counter of the first instruction(optional)
-    :type pc: int
     :param fork: fork name (optional)
-    :type fork: str
     :return: the text representation of the assembler code
 
     Example use::
@@ -625,17 +607,13 @@ def disassemble(bytecode: str | bytes, pc: int = 0, fork: str = DEFAULT_FORK) ->
     return "\n".join(map(str, disassemble_all(bytecode, pc=pc, fork=fork)))
 
 
-def assemble(asmcode, pc=0, fork=DEFAULT_FORK):
+def assemble(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> bytes:
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
-        :type asmcode: str
         :param pc: program counter of the first instruction(optional)
-        :type pc: int
         :param fork: fork name (optional)
-        :type fork: str
         :return: the hex representation of the bytecode
-        :rtype: str
 
         Example use::
 
@@ -656,13 +634,9 @@ def disassemble_hex(bytecode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str
     """Disassemble an EVM bytecode
 
     :param bytecode: canonical representation of an evm bytecode (hexadecimal)
-    :type bytecode: str
     :param pc: program counter of the first instruction(optional)
-    :type pc: int
     :param fork: fork name (optional)
-    :type fork: str
     :return: the text representation of the assembler code
-    :rtype: str
 
     Example use::
 
@@ -677,21 +651,17 @@ def disassemble_hex(bytecode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str
     """
     if bytecode.startswith("0x"):
         bytecode = bytecode[2:]
-    bytecode = unhexlify(bytecode)
-    return disassemble(bytecode, pc=pc, fork=fork)
+    raw_bytecode: bytes = unhexlify(bytecode)
+    return disassemble(raw_bytecode, pc=pc, fork=fork)
 
 
-def assemble_hex(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str:
+def assemble_hex(asmcode: str | list[Instruction], pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
-        :type asmcode: str | iterator[Instruction]
         :param pc: program counter of the first instruction(optional)
-        :type pc: int
         :param fork: fork name (optional)
-        :type fork: str
         :return: the hex representation of the bytecode
-        :rtype: str
 
         Example use::
 
@@ -762,29 +732,29 @@ class InstructionTable:
                 self.__name_to_opcode[long_name] = opcode
         return self.__name_to_opcode
 
-    def _search_by_name(self, k):
+    def _search_by_name(self, k: str):
         return self._search_by_opcode(self._name_to_opcode[k])
 
-    def _search_by_opcode(self, k):
+    def _search_by_opcode(self, k: int):
         return (k,) + self._instruction_list[k]
 
-    def _search(self, k):
+    def _search(self, k: Any):
         try:
             value = self._search_by_opcode(k)
         except KeyError:
             value = self._search_by_name(k)
         return value
 
-    def __getitem__(self, k):
+    def __getitem__(self, k: str):
         return Instruction(*self._search(k))
 
-    def get(self, k, default=None):
+    def get(self, k: int, default=None):
         try:
             return Instruction(*self._search(k))
         except KeyError:
             return default
 
-    def __contains__(self, k):
+    def __contains__(self, k: str):
         return k in self._instruction_list or k in self._name_to_opcode
 
     def __iter__(self):
@@ -799,7 +769,7 @@ class InstructionTable:
 
 
 # from http://gavwood.com/paper.pdf
-frontier_instruction_table = {
+frontier_instruction_dict = {
     0x0: ("STOP", 0, 0, 0, 0, "Halts execution."),
     0x1: ("ADD", 0, 2, 1, 3, "Addition operation."),
     0x2: ("MUL", 0, 2, 1, 5, "Multiplication operation."),
@@ -1002,10 +972,10 @@ frontier_instruction_table = {
     ),
 }
 frontier_instruction_table: InstructionTable = InstructionTable(
-    frontier_instruction_table
+    frontier_instruction_dict
 )
 
-homestead_instruction_table = {
+homestead_instruction_dict = {
     0xF4: (
         "DELEGATECALL",
         0,
@@ -1015,9 +985,9 @@ homestead_instruction_table = {
         "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
     )
 }
-homestead_instruction_table = InstructionTable(homestead_instruction_table, previous_fork=frontier_instruction_table)  # type: ignore
+homestead_instruction_table = InstructionTable(homestead_instruction_dict, previous_fork=frontier_instruction_table)
 
-tangerine_whistle_instruction_table = {
+tangerine_whistle_instruction_dict = {
     0x3B: ("EXTCODESIZE", 0, 1, 1, 700, "Get size of an account's code."),
     0x3C: ("EXTCODECOPY", 0, 4, 0, 700, "Copy an account's code to memory."),
     0x31: ("BALANCE", 0, 1, 1, 400, "Get balance of the given account."),
@@ -1049,12 +1019,12 @@ tangerine_whistle_instruction_table = {
         "Halt execution and register account for later deletion.",
     ),
 }
-tangerine_whistle_instruction_table = InstructionTable(tangerine_whistle_instruction_table, previous_fork=homestead_instruction_table)  # type: ignore
+tangerine_whistle_instruction_table = InstructionTable(tangerine_whistle_instruction_dict, previous_fork=homestead_instruction_table)
 
-spurious_dragon_instruction_table = {}  # type: ignore
-spurious_dragon_instruction_table = InstructionTable(spurious_dragon_instruction_table, previous_fork=tangerine_whistle_instruction_table)  # type: ignore
+spurious_dragon_instruction_dict: dict = {}
+spurious_dragon_instruction_table = InstructionTable(spurious_dragon_instruction_dict, previous_fork=tangerine_whistle_instruction_table)
 
-byzantium_instruction_table = {
+byzantium_instruction_dict = {
     0x3D: (
         "RETURNDATASIZE",
         0,
@@ -1081,9 +1051,9 @@ byzantium_instruction_table = {
         "Stop execution and revert state changes, without consuming all provided gas and providing a reason.",
     ),
 }
-byzantium_instruction_table = InstructionTable(byzantium_instruction_table, previous_fork=spurious_dragon_instruction_table)  # type: ignore
+byzantium_instruction_table = InstructionTable(byzantium_instruction_dict, previous_fork=spurious_dragon_instruction_table)
 
-constantinople_instruction_table = {
+constantinople_instruction_dict = {
     0x1B: ("SHL", 0, 2, 1, 3, "Shift left."),
     0x1C: ("SHR", 0, 2, 1, 3, "Logical shift right."),
     0x1D: ("SAR", 0, 2, 1, 3, "Arithmetic shift right"),
@@ -1097,32 +1067,32 @@ constantinople_instruction_table = {
         "Behaves identically to CREATE, except using keccak256( 0xff ++ address ++ salt ++ keccak256(init_code)))[12:] as the address where the contract is initialized at",
     ),
 }
-constantinople_instruction_table = InstructionTable(constantinople_instruction_table, previous_fork=byzantium_instruction_table)  # type: ignore
+constantinople_instruction_table = InstructionTable(constantinople_instruction_dict, previous_fork=byzantium_instruction_table)
 
 serenity_instruction_table = InstructionTable(
     {}, previous_fork=constantinople_instruction_table
 )
 
-istanbul_instruction_table = {
+istanbul_instruction_dict = {
     0x31: ("BALANCE", 0, 1, 1, 700, "Get balance of the given account."),
     0x3F: ("EXTCODEHASH", 0, 1, 1, 700, "Get hash of code"),
     0x46: ("CHAINID", 0, 0, 1, 2, "Get current chainid."),
     0x47: ("SELFBALANCE", 0, 0, 1, 5, "Balance of the current address."),
     0x54: ("SLOAD", 0, 1, 1, 800, "Load word from storage."),
 }
-istanbul_instruction_table = InstructionTable(istanbul_instruction_table, previous_fork=serenity_instruction_table)  # type: ignore
+istanbul_instruction_table = InstructionTable(istanbul_instruction_dict, previous_fork=serenity_instruction_table)
 
-london_instruction_table = {0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")}
+london_instruction_dict = {0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")}
 
-london_instruction_table = InstructionTable(london_instruction_table, previous_fork=istanbul_instruction_table)  # type: ignore
+london_instruction_table = InstructionTable(london_instruction_dict, previous_fork=istanbul_instruction_table)
 
-shanghai_instruction_table = {
+shanghai_instruction_dict = {
     0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")
 }
 
-shanghai_instruction_table = InstructionTable(shanghai_instruction_table, previous_fork=london_instruction_table)  # type: ignore
+shanghai_instruction_table = InstructionTable(shanghai_instruction_dict, previous_fork=london_instruction_table)
 
-cancun_instruction_table = {
+cancun_instruction_dict = {
     0x49: ("BLOBHASH", 0, 1, 1, 3, "Get versioned hashes"),
     0x4A: (
         "BLOBBASEFEE",
@@ -1171,24 +1141,24 @@ cancun_instruction_table = {
     0xFA: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
 }
 
-cancun_instruction_table = InstructionTable(cancun_instruction_table, previous_fork=shanghai_instruction_table)  # type: ignore
+cancun_instruction_table = InstructionTable(cancun_instruction_dict, previous_fork=shanghai_instruction_table)
 
-osaka_instruction_table = {
+osaka_instruction_dict = {
     0x1E: ("CLZ", 0, 1, 1, 5, "Count leading zero bits"),
 }
 
 osaka_instruction_table = InstructionTable(
-    osaka_instruction_table, previous_fork=cancun_instruction_table
-)  # type: ignore
+    osaka_instruction_dict, previous_fork=cancun_instruction_table
+)
 
-EOF_instruction_table = {}
+EOF_instruction_dict: dict = {}
 
 EOF_instruction_table = InstructionTable(
     {}, previous_fork=cancun_instruction_table
-)  # type: ignore
+)
 
 
-accepted_forks = (
+accepted_forks: tuple[str, ...] = (
     "frontier",
     "homestead",
     "tangerine_whistle",
@@ -1206,7 +1176,7 @@ accepted_forks = (
 )
 
 
-instruction_tables = {
+instruction_tables: dict[str, InstructionTable] = {
     "frontier": frontier_instruction_table,
     "homestead": homestead_instruction_table,
     "tangerine_whistle": tangerine_whistle_instruction_table,
@@ -1224,7 +1194,7 @@ instruction_tables = {
 }
 
 
-def block_to_fork(block_number):
+def block_to_fork(block_number: int):
     """Convert block number to fork name.
 
     :param block_number: block number
