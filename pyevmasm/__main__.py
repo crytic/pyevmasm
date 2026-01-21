@@ -1,23 +1,21 @@
 #!/usr/bin/env python
 import argparse
-import sys
 import binascii
+import sys
 
 from .evmasm import (
-    assemble_hex,
-    disassemble_all,
-    instruction_tables,
-    assemble_all,
-    block_to_fork,
     DEFAULT_FORK,
     accepted_forks,
+    assemble_all,
+    assemble_hex,
+    block_to_fork,
+    disassemble_all,
+    instruction_tables,
 )
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="pyevmasm the EVM assembler and disassembler"
-    )
+    parser = argparse.ArgumentParser(description="pyevmasm the EVM assembler and disassembler")
     group_action = parser.add_mutually_exclusive_group(required=True)
     group_action.add_argument(
         "-a",

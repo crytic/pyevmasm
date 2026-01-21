@@ -1,8 +1,8 @@
-from bisect import bisect
-from binascii import hexlify, unhexlify
-
-from typing import Iterator, Any, Optional, List, Tuple, Dict, Union
 import copy
+from binascii import hexlify, unhexlify
+from bisect import bisect
+from collections.abc import Iterator
+from typing import Any
 
 DEFAULT_FORK = "osaka"
 
@@ -58,7 +58,7 @@ class Instruction:
         pushes: int,
         fee: int,
         description: str,
-        operand: Optional[int] = None,
+        operand: int | None = None,
         pc: int = 0,
     ):
         """
@@ -205,9 +205,7 @@ class Instruction:
         if self.operand_size != 0 and value is not None:
             mask = (1 << self.operand_size * 8) - 1
             if ~mask & value:
-                raise ValueError(
-                    f"operand should be {self.operand_size * 8:d} bits long"
-                )
+                raise ValueError(f"operand should be {self.operand_size * 8:d} bits long")
             self._operand = value
 
     @property
@@ -443,9 +441,7 @@ def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruc
         raise AssembleError(f"Something wrong at pc {pc:d}")
 
 
-def assemble_all(
-    asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK
-) -> Iterator[Instruction]:
+def assemble_all(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Iterator[Instruction]:
     """ Assemble a sequence of textual representation of EVM instructions
 
         :param asmcode: assembly code for any number of instructions
@@ -479,10 +475,10 @@ def assemble_all(
 
 # make the bytecode typed iterable
 def disassemble_one(
-    bytecode: Union[str, bytes, bytearray, Iterator],
+    bytecode: str | bytes | bytearray | Iterator,
     pc: int = 0,
     fork: str = DEFAULT_FORK,
-) -> Union[Instruction, None]:
+) -> Instruction | None:
     """Disassemble a single instruction from a bytecode
 
     :param bytecode: the bytecode stream
@@ -511,9 +507,7 @@ def disassemble_one(
 
     instruction = copy.copy(instruction_table.get(opcode, None))
     if instruction is None:
-        instruction = Instruction(
-            opcode, "INVALID", 0, 0, 0, 0, "Unspecified invalid instruction."
-        )
+        instruction = Instruction(opcode, "INVALID", 0, 0, 0, 0, "Unspecified invalid instruction.")
     instruction.pc = pc
 
     try:
@@ -527,7 +521,7 @@ def disassemble_one(
 
 # how to map yield and generator?
 def disassemble_all(
-    bytecode: Union[str, bytes, bytearray, Iterator],
+    bytecode: str | bytes | bytearray | Iterator,
     pc: int = 0,
     fork: str = DEFAULT_FORK,
 ) -> Iterator[Instruction]:
@@ -572,7 +566,7 @@ def disassemble_all(
 
 
 def disassemble(
-    bytecode: Union[str, bytes, bytearray, Iterator],
+    bytecode: str | bytes | bytearray | Iterator,
     pc: int = 0,
     fork: str = DEFAULT_FORK,
 ) -> str:
@@ -646,9 +640,7 @@ def disassemble_hex(bytecode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str
     return disassemble(raw_bytecode, pc=pc, fork=fork)
 
 
-def assemble_hex(
-    asmcode: Union[str, List[Instruction]], pc: int = 0, fork: str = DEFAULT_FORK
-) -> str:
+def assemble_hex(asmcode: str | list[Instruction], pc: int = 0, fork: str = DEFAULT_FORK) -> str:
     """ Assemble an EVM program
 
         :param asmcode: an evm assembler program
@@ -700,7 +692,7 @@ class InstructionTable:
     __slots__ = ("_instruction_list", "__name_to_opcode")
 
     def __init__(self, *args, **kwargs):
-        previous_fork = kwargs.get("previous_fork", None)
+        previous_fork = kwargs.get("previous_fork")
 
         self._instruction_list = {}
         self.__name_to_opcode = None
@@ -964,9 +956,7 @@ frontier_instruction_dict = {
         "Halt execution and register account for later deletion.",
     ),
 }
-frontier_instruction_table: InstructionTable = InstructionTable(
-    frontier_instruction_dict
-)
+frontier_instruction_table: InstructionTable = InstructionTable(frontier_instruction_dict)
 
 homestead_instruction_dict = {
     0xF4: (
@@ -1135,9 +1125,7 @@ paris_instruction_table = InstructionTable(
     paris_instruction_dict, previous_fork=london_instruction_table
 )
 
-shanghai_instruction_dict = {
-    0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")
-}
+shanghai_instruction_dict = {0x5F: ("PUSH", 0, 0, 1, 2, "Place 0 constant byte item on stack.")}
 
 shanghai_instruction_table = InstructionTable(
     shanghai_instruction_dict, previous_fork=paris_instruction_table
@@ -1177,7 +1165,7 @@ osaka_instruction_table = InstructionTable(
 )
 
 
-accepted_forks: Tuple[str, ...] = (
+accepted_forks: tuple[str, ...] = (
     "frontier",
     "homestead",
     "tangerine_whistle",
@@ -1197,7 +1185,7 @@ accepted_forks: Tuple[str, ...] = (
 )
 
 
-instruction_tables: Dict[str, InstructionTable] = {
+instruction_tables: dict[str, InstructionTable] = {
     "frontier": frontier_instruction_table,
     "homestead": homestead_instruction_table,
     "tangerine_whistle": tangerine_whistle_instruction_table,

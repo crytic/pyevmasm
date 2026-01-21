@@ -2,9 +2,9 @@ name: Scan dependencies for vulnerabilities with pip-audit
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
   schedule:
     - cron: "0 12 * * *"
 
@@ -23,13 +23,13 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7.2.0
+
       - name: Install project
         run: |
-          python -m venv /tmp/pip-audit-env
-          source /tmp/pip-audit-env/bin/activate
-
-          python -m pip install --upgrade pip
-          python -m pip install .
+          uv venv /tmp/pip-audit-env
+          VIRTUAL_ENV=/tmp/pip-audit-env uv pip install .
 
       - name: Run pip-audit
         uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266  # v1.1.0

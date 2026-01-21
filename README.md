@@ -84,15 +84,15 @@ pip install pyevmasm
 
 Or, install the library from source:
 ```sh
-git clone https://github.com/trailofbits/pyevmasm
+git clone https://github.com/crytic/pyevmasm
 cd pyevmasm
-python setup.py install --user
+pip install .
 ```
 
-to run the tests
-
+For development (requires [uv](https://docs.astral.sh/uv/)):
 ```sh
-python -m unittest tests\test_EVMAssembler.py -v
+uv sync --group dev
+uv run pytest
 ```
 
 ## Documentation

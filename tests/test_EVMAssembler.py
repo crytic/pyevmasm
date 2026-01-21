@@ -1,286 +1,271 @@
-import unittest
-
 import pyevmasm as EVMAsm
 
 
-# noinspection PyPep8Naming
-class EVMTest_Assembler(unittest.TestCase):
-    _multiprocess_can_split_ = True
-    maxDiff = None
+def test_ADD_1():
+    instruction = EVMAsm.disassemble_one(b"\x60\x10")
+    assert (
+        EVMAsm.Instruction(0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0)
+        == instruction
+    )
 
-    def test_ADD_1(self):
-        instruction = EVMAsm.disassemble_one(b"\x60\x10")
-        self.assertEqual(
-            EVMAsm.Instruction(
-                0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0
-            ),
-            instruction,
-        )
+    instruction = EVMAsm.assemble_one("PUSH1 0x10")
+    assert instruction == EVMAsm.Instruction(
+        0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0
+    )
 
-        instruction = EVMAsm.assemble_one("PUSH1 0x10")
-        self.assertEqual(
-            instruction,
-            EVMAsm.Instruction(
-                0x60, "PUSH", 1, 0, 1, 3, "Place 1 byte item on stack.", 16, 0
-            ),
-        )
+    instructions1 = EVMAsm.disassemble_all(b"\x30\x31")
+    instructions2 = EVMAsm.assemble_all("ADDRESS\nBALANCE")
+    assert all(a == b for a, b in zip(instructions1, instructions2, strict=True))
 
-        instructions1 = EVMAsm.disassemble_all(b"\x30\x31")
-        instructions2 = EVMAsm.assemble_all("ADDRESS\nBALANCE")
-        self.assertTrue(all(a == b for a, b in zip(instructions1, instructions2)))
-
-        # High level simple assembler/disassembler
-
-        bytecode = EVMAsm.assemble_hex(
-            """PUSH1 0x80
-               BLOCKHASH
-               MSTORE
-               PUSH1 0x2
-               PUSH2 0x100
-            """
-        )
-        self.assertEqual(bytecode, "0x608040526002610100")
-
-        asmcode = EVMAsm.disassemble_hex("0x608040526002610100")
-        self.assertEqual(
-            asmcode, """PUSH1 0x80\nBLOCKHASH\nMSTORE\nPUSH1 0x2\nPUSH2 0x100"""
-        )
-
-    def test_STOP(self):
-        insn = EVMAsm.disassemble_one(b"\x00")
-        self.assertTrue(insn.mnemonic == "STOP")
-
-    def test_JUMPI(self):
-        insn = EVMAsm.disassemble_one(b"\x57")
-        self.assertTrue(insn.mnemonic == "JUMPI")
-        self.assertTrue(insn.is_branch)
-
-    def test_pre_byzantium(self):
-        insn = EVMAsm.disassemble_one(b"\x57", fork="frontier")
-        self.assertTrue(insn.mnemonic == "JUMPI")
-        self.assertTrue(insn.is_branch)
-        insn = EVMAsm.disassemble_one(b"\xfa", fork="frontier")
-        self.assertTrue(insn.mnemonic == "INVALID")  # STATICCALL added in byzantium
-        insn = EVMAsm.disassemble_one(b"\xfd", fork="frontier")
-        self.assertTrue(insn.mnemonic == "INVALID")  # REVERT added in byzantium
-
-    def test_byzantium_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x57", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "JUMPI")
-        self.assertTrue(insn.is_branch)
-        insn = EVMAsm.disassemble_one(b"\x1b", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "INVALID")  # SHL added in constantinople
-        insn = EVMAsm.disassemble_one(b"\x1c", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "INVALID")  # SHR added in constantinople
-        insn = EVMAsm.disassemble_one(b"\x1d", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "INVALID")  # SAR added in constantinople
-        insn = EVMAsm.disassemble_one(b"\x3f", fork="byzantium")
-        self.assertTrue(
-            insn.mnemonic == "INVALID"
-        )  # EXTCODEHASH added in constantinople
-        insn = EVMAsm.disassemble_one(b"\xf5", fork="byzantium")
-        self.assertTrue(insn.mnemonic == "INVALID")  # CREATE2 added in constantinople
-
-    def test_constantinople_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x1b", fork="constantinople")
-        self.assertTrue(insn.mnemonic == "SHL")
-        self.assertTrue(insn.is_arithmetic)
-        insn = EVMAsm.disassemble_one(b"\x1c", fork="constantinople")
-        self.assertTrue(insn.mnemonic == "SHR")
-        self.assertTrue(insn.is_arithmetic)
-        insn = EVMAsm.disassemble_one(b"\x1d", fork="constantinople")
-        self.assertTrue(insn.mnemonic == "SAR")
-        self.assertTrue(insn.is_arithmetic)
-        insn = EVMAsm.disassemble_one(b"\x3f", fork="constantinople")
-        self.assertTrue(insn.mnemonic == "EXTCODEHASH")
-        insn = EVMAsm.disassemble_one(b"\xf5", fork="constantinople")
-        self.assertTrue(insn.mnemonic == "CREATE2")
-
-    def test_istanbul_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x31", fork="istanbul")
-        self.assertTrue(insn.mnemonic == "BALANCE")
-        self.assertTrue(insn.fee == 700)
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x3f", fork="istanbul")
-        self.assertTrue(insn.mnemonic == "EXTCODEHASH")
-        self.assertTrue(insn.fee == 700)
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x46", fork="istanbul")
-        self.assertTrue(insn.mnemonic == "CHAINID")
-        self.assertTrue(insn.fee == 2)
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x47", fork="istanbul")
-        self.assertTrue(insn.mnemonic == "SELFBALANCE")
-        self.assertTrue(insn.fee == 5)
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x54", fork="istanbul")
-        self.assertTrue(insn.mnemonic == "SLOAD")
-        self.assertTrue(insn.fee == 800)
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-
-    def test_berlin_fork(self):
-        insn = EVMAsm.disassemble_one(b"\xf1", fork="berlin")
-        self.assertTrue(insn.mnemonic == "CALL")
-        self.assertTrue(insn.pops == 7)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-
-    def test_london_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x48", fork="london")
-        self.assertTrue(insn.mnemonic == "BASEFEE")
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 2)
-
-    def test_shanghai_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x5f", fork="shanghai")
-        self.assertTrue(insn.mnemonic == "PUSH0")
-        self.assertTrue(insn.fee == 2)
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.operand_size == 0)
-
-    def test_cancun_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x49", fork="cancun")
-        self.assertTrue(insn.mnemonic == "BLOBHASH")
-        self.assertTrue(insn.fee == 3)
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x4a", fork="cancun")
-        self.assertTrue(insn.mnemonic == "BLOBBASEFEE")
-        self.assertTrue(insn.fee == 2)
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x5c", fork="cancun")
-        self.assertTrue(insn.mnemonic == "TLOAD")
-        self.assertTrue(insn.fee == 100)
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        insn = EVMAsm.disassemble_one(b"\x5d", fork="cancun")
-        self.assertTrue(insn.mnemonic == "TSTORE")
-        self.assertTrue(insn.fee == 100)
-        self.assertTrue(insn.pops == 2)
-        self.assertTrue(insn.pushes == 0)
-
-        insn = EVMAsm.disassemble_one(b"\x20", fork="cancun")
-        self.assertTrue(insn.mnemonic == "KECCAK256")
-        self.assertTrue(insn.pops == 2)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 30)
-
-        insn = EVMAsm.disassemble_one(b"\x31", fork="cancun")
-        self.assertTrue(insn.mnemonic == "BALANCE")
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-
-        insn = EVMAsm.disassemble_one(b"\x3b", fork="cancun")
-        self.assertTrue(insn.mnemonic == "EXTCODESIZE")
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\x3c", fork="cancun")
-        self.assertTrue(insn.mnemonic == "EXTCODECOPY")
-        self.assertTrue(insn.pops == 4)
-        self.assertTrue(insn.pushes == 0)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\x3f", fork="cancun")
-        self.assertTrue(insn.mnemonic == "EXTCODEHASH")
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\x44", fork="cancun")
-        self.assertTrue(insn.mnemonic == "PREVRANDAO")
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 2)
-         
-        insn = EVMAsm.disassemble_one(b"\x54", fork="cancun")
-        self.assertTrue(insn.mnemonic == "SLOAD")
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\x58", fork="cancun")
-        self.assertTrue(insn.mnemonic == "PC")
-        self.assertTrue(insn.pops == 0)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 2)
-         
-        insn = EVMAsm.disassemble_one(b"\xf1", fork="cancun")
-        self.assertTrue(insn.mnemonic == "CALL")
-        self.assertTrue(insn.pops == 7)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\xf2", fork="cancun")
-        self.assertTrue(insn.mnemonic == "CALLCODE")
-        self.assertTrue(insn.pops == 7)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\xf4", fork="cancun")
-        self.assertTrue(insn.mnemonic == "DELEGATECALL")
-        self.assertTrue(insn.pops == 6)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-        insn = EVMAsm.disassemble_one(b"\xfa", fork="cancun")
-        self.assertTrue(insn.mnemonic == "STATICCALL")
-        self.assertTrue(insn.pops == 6)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 100)
-         
-
-    def test_osaka_fork(self):
-        insn = EVMAsm.disassemble_one(b"\x1e", fork="osaka")
-        self.assertTrue(insn.mnemonic == "CLZ")
-        self.assertTrue(insn.pops == 1)
-        self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee == 5)
-
-    def test_assemble_DUP1_regression(self):
-        insn = EVMAsm.assemble_one("DUP1")
-        self.assertEqual(insn.mnemonic, "DUP1")
-        self.assertEqual(insn.opcode, 0x80)
-
-    def test_assemble_LOGX_regression(self):
-        inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
-        log0_opcode = 0xA0
-        for n in range(5):
-            opcode = log0_opcode + n
-            self.assertTrue(
-                opcode in inst_table, "{!r} not in instruction_table".format(opcode)
-            )
-            asm = "LOG" + str(n)
-            self.assertTrue(
-                asm in inst_table, "{!r} not in instruction_table".format(asm)
-            )
-            insn = EVMAsm.assemble_one(asm)
-            self.assertEqual(insn.mnemonic, asm)
-            self.assertEqual(insn.opcode, opcode)
-
-    def test_consistency_assembler_disassembler(self):
+    # High level simple assembler/disassembler
+    bytecode = EVMAsm.assemble_hex(
+        """PUSH1 0x80
+           BLOCKHASH
+           MSTORE
+           PUSH1 0x2
+           PUSH2 0x100
         """
-        Tests whether every opcode that can be disassembled, can also be
-        assembled again.
-        """
-        inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
-        for opcode in inst_table.keys():
-            b = opcode.to_bytes(1, "little") + b"\x00" * 32
-            inst_dis = EVMAsm.disassemble_one(b)
-            a = str(inst_dis)
-            inst_as = EVMAsm.assemble_one(a)
-            self.assertEqual(inst_dis, inst_as)
+    )
+    assert bytecode == "0x608040526002610100"
+
+    asmcode = EVMAsm.disassemble_hex("0x608040526002610100")
+    assert asmcode == """PUSH1 0x80\nBLOCKHASH\nMSTORE\nPUSH1 0x2\nPUSH2 0x100"""
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_STOP():
+    insn = EVMAsm.disassemble_one(b"\x00")
+    assert insn.mnemonic == "STOP"
+
+
+def test_JUMPI():
+    insn = EVMAsm.disassemble_one(b"\x57")
+    assert insn.mnemonic == "JUMPI"
+    assert insn.is_branch
+
+
+def test_pre_byzantium():
+    insn = EVMAsm.disassemble_one(b"\x57", fork="frontier")
+    assert insn.mnemonic == "JUMPI"
+    assert insn.is_branch
+    insn = EVMAsm.disassemble_one(b"\xfa", fork="frontier")
+    assert insn.mnemonic == "INVALID"  # STATICCALL added in byzantium
+    insn = EVMAsm.disassemble_one(b"\xfd", fork="frontier")
+    assert insn.mnemonic == "INVALID"  # REVERT added in byzantium
+
+
+def test_byzantium_fork():
+    insn = EVMAsm.disassemble_one(b"\x57", fork="byzantium")
+    assert insn.mnemonic == "JUMPI"
+    assert insn.is_branch
+    insn = EVMAsm.disassemble_one(b"\x1b", fork="byzantium")
+    assert insn.mnemonic == "INVALID"  # SHL added in constantinople
+    insn = EVMAsm.disassemble_one(b"\x1c", fork="byzantium")
+    assert insn.mnemonic == "INVALID"  # SHR added in constantinople
+    insn = EVMAsm.disassemble_one(b"\x1d", fork="byzantium")
+    assert insn.mnemonic == "INVALID"  # SAR added in constantinople
+    insn = EVMAsm.disassemble_one(b"\x3f", fork="byzantium")
+    assert insn.mnemonic == "INVALID"  # EXTCODEHASH added in constantinople
+    insn = EVMAsm.disassemble_one(b"\xf5", fork="byzantium")
+    assert insn.mnemonic == "INVALID"  # CREATE2 added in constantinople
+
+
+def test_constantinople_fork():
+    insn = EVMAsm.disassemble_one(b"\x1b", fork="constantinople")
+    assert insn.mnemonic == "SHL"
+    assert insn.is_arithmetic
+    insn = EVMAsm.disassemble_one(b"\x1c", fork="constantinople")
+    assert insn.mnemonic == "SHR"
+    assert insn.is_arithmetic
+    insn = EVMAsm.disassemble_one(b"\x1d", fork="constantinople")
+    assert insn.mnemonic == "SAR"
+    assert insn.is_arithmetic
+    insn = EVMAsm.disassemble_one(b"\x3f", fork="constantinople")
+    assert insn.mnemonic == "EXTCODEHASH"
+    insn = EVMAsm.disassemble_one(b"\xf5", fork="constantinople")
+    assert insn.mnemonic == "CREATE2"
+
+
+def test_istanbul_fork():
+    insn = EVMAsm.disassemble_one(b"\x31", fork="istanbul")
+    assert insn.mnemonic == "BALANCE"
+    assert insn.fee == 700
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x3f", fork="istanbul")
+    assert insn.mnemonic == "EXTCODEHASH"
+    assert insn.fee == 700
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x46", fork="istanbul")
+    assert insn.mnemonic == "CHAINID"
+    assert insn.fee == 2
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x47", fork="istanbul")
+    assert insn.mnemonic == "SELFBALANCE"
+    assert insn.fee == 5
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x54", fork="istanbul")
+    assert insn.mnemonic == "SLOAD"
+    assert insn.fee == 800
+    assert insn.pops == 1
+    assert insn.pushes == 1
+
+
+def test_berlin_fork():
+    insn = EVMAsm.disassemble_one(b"\xf1", fork="berlin")
+    assert insn.mnemonic == "CALL"
+    assert insn.pops == 7
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+
+def test_london_fork():
+    insn = EVMAsm.disassemble_one(b"\x48", fork="london")
+    assert insn.mnemonic == "BASEFEE"
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    assert insn.fee == 2
+
+
+def test_shanghai_fork():
+    insn = EVMAsm.disassemble_one(b"\x5f", fork="shanghai")
+    assert insn.mnemonic == "PUSH0"
+    assert insn.fee == 2
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    assert insn.operand_size == 0
+
+
+def test_cancun_fork():
+    insn = EVMAsm.disassemble_one(b"\x49", fork="cancun")
+    assert insn.mnemonic == "BLOBHASH"
+    assert insn.fee == 3
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x4a", fork="cancun")
+    assert insn.mnemonic == "BLOBBASEFEE"
+    assert insn.fee == 2
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x5c", fork="cancun")
+    assert insn.mnemonic == "TLOAD"
+    assert insn.fee == 100
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    insn = EVMAsm.disassemble_one(b"\x5d", fork="cancun")
+    assert insn.mnemonic == "TSTORE"
+    assert insn.fee == 100
+    assert insn.pops == 2
+    assert insn.pushes == 0
+
+    insn = EVMAsm.disassemble_one(b"\x20", fork="cancun")
+    assert insn.mnemonic == "KECCAK256"
+    assert insn.pops == 2
+    assert insn.pushes == 1
+    assert insn.fee == 30
+
+    insn = EVMAsm.disassemble_one(b"\x31", fork="cancun")
+    assert insn.mnemonic == "BALANCE"
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\x3b", fork="cancun")
+    assert insn.mnemonic == "EXTCODESIZE"
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\x3c", fork="cancun")
+    assert insn.mnemonic == "EXTCODECOPY"
+    assert insn.pops == 4
+    assert insn.pushes == 0
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\x3f", fork="cancun")
+    assert insn.mnemonic == "EXTCODEHASH"
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\x44", fork="cancun")
+    assert insn.mnemonic == "PREVRANDAO"
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    assert insn.fee == 2
+
+    insn = EVMAsm.disassemble_one(b"\x54", fork="cancun")
+    assert insn.mnemonic == "SLOAD"
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\x58", fork="cancun")
+    assert insn.mnemonic == "PC"
+    assert insn.pops == 0
+    assert insn.pushes == 1
+    assert insn.fee == 2
+
+    insn = EVMAsm.disassemble_one(b"\xf1", fork="cancun")
+    assert insn.mnemonic == "CALL"
+    assert insn.pops == 7
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\xf2", fork="cancun")
+    assert insn.mnemonic == "CALLCODE"
+    assert insn.pops == 7
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\xf4", fork="cancun")
+    assert insn.mnemonic == "DELEGATECALL"
+    assert insn.pops == 6
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+    insn = EVMAsm.disassemble_one(b"\xfa", fork="cancun")
+    assert insn.mnemonic == "STATICCALL"
+    assert insn.pops == 6
+    assert insn.pushes == 1
+    assert insn.fee == 100
+
+
+def test_osaka_fork():
+    insn = EVMAsm.disassemble_one(b"\x1e", fork="osaka")
+    assert insn.mnemonic == "CLZ"
+    assert insn.pops == 1
+    assert insn.pushes == 1
+    assert insn.fee == 5
+
+
+def test_assemble_DUP1_regression():
+    insn = EVMAsm.assemble_one("DUP1")
+    assert insn.mnemonic == "DUP1"
+    assert insn.opcode == 0x80
+
+
+def test_assemble_LOGX_regression():
+    inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
+    log0_opcode = 0xA0
+    for n in range(5):
+        opcode = log0_opcode + n
+        assert opcode in inst_table, f"{opcode!r} not in instruction_table"
+        asm = "LOG" + str(n)
+        assert asm in inst_table, f"{asm!r} not in instruction_table"
+        insn = EVMAsm.assemble_one(asm)
+        assert insn.mnemonic == asm
+        assert insn.opcode == opcode
+
+
+def test_consistency_assembler_disassembler():
+    """Tests whether every opcode that can be disassembled can also be assembled."""
+    inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
+    for opcode in inst_table.keys():  # noqa: SIM118
+        b = opcode.to_bytes(1, "little") + b"\x00" * 32
+        inst_dis = EVMAsm.disassemble_one(b)
+        a = str(inst_dis)
+        inst_as = EVMAsm.assemble_one(a)
+        assert inst_dis == inst_as
