@@ -48,7 +48,7 @@ class ParseError(Exception):
     pass
 
 
-class Instruction(object):
+class Instruction:
     def __init__(
         self,
         opcode: int,
@@ -126,26 +126,19 @@ class Instruction(object):
             and self._description == other._description
         )
 
-    def __repr__(self) -> str:
-        output = "Instruction(0x{:x}, {}, {:d}, {:d}, {:d}, {:d}, {}, {}, {})".format(
-            self._opcode,
-            self._name,
-            self._operand_size,
-            self._pops,
-            self._pushes,
-            self._fee,
-            self._description,
-            self._operand,
-            self._pc,
+    def __repr__(self):
+        return (
+            f"Instruction(0x{self._opcode:x}, {self._name}, {self._operand_size:d}, "
+            f"{self._pops:d}, {self._pushes:d}, {self._fee:d}, {self._description}, "
+            f"{self._operand}, {self._pc})"
         )
-        return output
 
     def __str__(self):
         if self.has_operand:
             if self.operand is not None:
-                return "{} 0x{:x}".format(self.name, self.operand)
+                return f"{self.name} 0x{self.operand:x}"
             else:
-                return "{} ???".format(self.name)
+                return f"{self.name} ???"
         return self.name
 
     @property
@@ -159,16 +152,18 @@ class Instruction(object):
         return self.name
 
     @staticmethod
-    def _long_name(short_name: str, operand_size: int, pops: int):
-        if short_name == "PUSH":
-            return "PUSH{:d}".format(operand_size)
-        elif short_name == "DUP":
-            return "DUP{:d}".format(pops)
-        elif short_name == "SWAP":
-            return "SWAP{:d}".format(pops - 1)
-        elif short_name == "LOG":
-            return "LOG{:d}".format(pops - 2)
-        return short_name
+    def _long_name(short_name, operand_size, pops):
+        match short_name:
+            case "PUSH":
+                return f"PUSH{operand_size:d}"
+            case "DUP":
+                return f"DUP{pops:d}"
+            case "SWAP":
+                return f"SWAP{pops - 1:d}"
+            case "LOG":
+                return f"LOG{pops - 2:d}"
+            case _:
+                return short_name
 
     @property
     def name(self):
@@ -211,7 +206,7 @@ class Instruction(object):
             mask = (1 << self.operand_size * 8) - 1
             if ~mask & value:
                 raise ValueError(
-                    "operand should be {:d} bits long".format(self.operand_size * 8)
+                    f"operand should be {self.operand_size * 8:d} bits long"
                 )
             self._operand = value
 
@@ -445,7 +440,7 @@ def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruc
             instr.operand = int(asmcode_list[1], 0)
         return instr
     except Exception:
-        raise AssembleError("Something wrong at pc {:d}".format(pc))
+        raise AssembleError(f"Something wrong at pc {pc:d}")
 
 
 def assemble_all(
@@ -712,7 +707,7 @@ class InstructionTable:
 
         if previous_fork is not None:
             if not isinstance(previous_fork, self.__class__):
-                raise TypeError("{} expected".format(self.__class__))
+                raise TypeError(f"{self.__class__} expected")
             self._instruction_list.update(previous_fork._instruction_list)
 
         self._instruction_list.update(args[0])

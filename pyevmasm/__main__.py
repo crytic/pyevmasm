@@ -77,8 +77,8 @@ def main():
             fork = block_to_fork(block_number)
         except ValueError:
             sys.stderr.write(
-                "Wrong fork name or block number. "
-                "Please provide an integer or one of %s.\n" % accepted_forks
+                f"Wrong fork name or block number. "
+                f"Please provide an integer or one of {accepted_forks}.\n"
             )
             sys.exit(1)
     else:
@@ -87,11 +87,7 @@ def main():
     instruction_table = instruction_tables[fork]
     if args.print_opcode_table:
         for instr in instruction_table:
-            print(
-                "0x{:02x}: {:16s} {:s}".format(
-                    instr.opcode, instr.name, instr.description
-                )
-            )
+            print(f"0x{instr.opcode:02x}: {instr.name:16s} {instr.description:s}")
         sys.exit(0)
 
     if args.assemble:
@@ -101,15 +97,12 @@ def main():
             sys.exit(0)
         if args.binary_output:
             for i in assemble_all(asm, fork=fork):
-                if sys.version_info >= (3, 2):
-                    args.output.buffer.write(i.bytes)
-                else:
-                    args.output.write(i.bytes)
+                args.output.buffer.write(i.bytes)
         else:
             args.output.write(assemble_hex(asm, fork=fork) + "\n")
 
     if args.disassemble:
-        if args.binary_input and sys.version_info >= (3, 2):
+        if args.binary_input:
             buf = args.input.buffer.read()
         else:
             try:
@@ -135,7 +128,7 @@ def main():
 
         insns = list(disassemble_all(buf, fork=fork))
         for i in insns:
-            args.output.write("%08x: %s\n" % (i.pc, str(i)))
+            args.output.write(f"{i.pc:08x}: {i}\n")
 
 
 if __name__ == "__main__":

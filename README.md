@@ -75,7 +75,7 @@ MSTORE
 
 # Installation
 
-Python >=2.7 or Python >=3.3 is required.
+Python >=3.10 is required.
 
 Install the latest stable version using pip:
 ```sh

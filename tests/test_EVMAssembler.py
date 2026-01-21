@@ -1,14 +1,6 @@
-import sys
 import unittest
 
 import pyevmasm as EVMAsm
-
-
-def int_to_bytes(i):
-    if sys.version_info[0] >= 3:
-        return i.to_bytes(1, "little")
-    else:
-        return bytes(chr(i))
 
 
 # noinspection PyPep8Naming
@@ -283,7 +275,7 @@ class EVMTest_Assembler(unittest.TestCase):
         """
         inst_table = EVMAsm.instruction_tables[EVMAsm.DEFAULT_FORK]
         for opcode in inst_table.keys():
-            b = int_to_bytes(opcode) + b"\x00" * 32
+            b = opcode.to_bytes(1, "little") + b"\x00" * 32
             inst_dis = EVMAsm.disassemble_one(b)
             a = str(inst_dis)
             inst_as = EVMAsm.assemble_one(a)
