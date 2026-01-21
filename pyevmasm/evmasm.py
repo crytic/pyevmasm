@@ -1084,6 +1084,29 @@ istanbul_instruction_table = InstructionTable(
 
 berlin_instruction_dict = {
     0xF1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
+    0x31: ("BALANCE", 0, 1, 1, 100, "Get balance of the given account."),
+    0x54: ("SLOAD", 0, 1, 1, 100, "Load word from storage."),
+    0x55: ("SSTORE", 0, 2, 0, 100, "Save word to storage."),
+    0xF2: (
+        "CALLCODE",
+        0,
+        7,
+        1,
+        100,
+        "Message-call into this account with alternative account's code.",
+    ),
+    0xF4: (
+        "DELEGATECALL",
+        0,
+        6,
+        1,
+        100,
+        "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
+    ),
+    0xFA: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
+    0x3B: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
+    0x3C: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
+    0x3F: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
 }
 
 berlin_instruction_table = InstructionTable(
@@ -1097,10 +1120,14 @@ london_instruction_table = InstructionTable(
 )
 
 paris_instruction_dict = {
-    0x3B: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
-    0x3C: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
-    0x3F: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
-    0x44: ("PREVRANDAO", 0, 0, 1, 2, "Get the block's difficulty."),
+    0x44: (
+        "PREVRANDAO",
+        0,
+        0,
+        1,
+        2,
+        "Get the latest RANDAO mix of the post beacon state of the previous block.",
+    ),
 }
 
 paris_instruction_table = InstructionTable(
@@ -1128,30 +1155,16 @@ cancun_instruction_dict = {
     0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage"),
     0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage"),
     0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
-    0x31: ("BALANCE", 0, 1, 1, 100, "Get balance of the given account."),
-    0x54: ("SLOAD", 0, 1, 1, 100, "Load word from storage."),
-    0x55: ("SSTORE", 0, 2, 0, 100, "Save word to storage."),
-    0xF2: (
-        "CALLCODE",
-        0,
-        7,
-        1,
-        100,
-        "Message-call into this account with alternative account's code.",
-    ),
-    0xF4: (
-        "DELEGATECALL",
-        0,
-        6,
-        1,
-        100,
-        "Message-call into this account with an alternative account's code, but persisting into this account with an alternative account's code.",
-    ),
-    0xFA: ("STATICCALL", 0, 6, 1, 100, "Static message-call into an account."),
 }
 
 cancun_instruction_table = InstructionTable(
     cancun_instruction_dict, previous_fork=shanghai_instruction_table
+)
+
+prague_instruction_dict: dict = {}
+
+prague_instruction_table = InstructionTable(
+    prague_instruction_dict, previous_fork=cancun_instruction_table
 )
 
 osaka_instruction_dict = {
@@ -1159,13 +1172,7 @@ osaka_instruction_dict = {
 }
 
 osaka_instruction_table = InstructionTable(
-    osaka_instruction_dict, previous_fork=cancun_instruction_table
-)
-
-prague_instruction_dict: dict = {}
-
-prague_instruction_table = InstructionTable(
-    prague_instruction_dict, previous_fork=cancun_instruction_table
+    osaka_instruction_dict, previous_fork=prague_instruction_table
 )
 
 
