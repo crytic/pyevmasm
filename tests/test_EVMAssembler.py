@@ -131,12 +131,19 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 1)
         self.assertTrue(insn.pushes == 1)
 
+    def test_berlin_fork(self):
+        insn = EVMAsm.disassemble_one(b"\xf1", fork="berlin")
+        self.assertTrue(insn.mnemonic == "CALL")
+        self.assertTrue(insn.pops == 7)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+
     def test_london_fork(self):
         insn = EVMAsm.disassemble_one(b"\x48", fork="london")
         self.assertTrue(insn.mnemonic == "BASEFEE")
-        self.assertTrue(insn.fee == 2)
         self.assertTrue(insn.pops == 0)
         self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 2)
 
     def test_shanghai_fork(self):
         insn = EVMAsm.disassemble_one(b"\x5f", fork="shanghai")
@@ -220,7 +227,7 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.mnemonic == "CALL")
         self.assertTrue(insn.pops == 7)
         self.assertTrue(insn.pushes == 1)
-        self.assertTrue(insn.fee ==100)
+        self.assertTrue(insn.fee == 100)
          
         insn = EVMAsm.disassemble_one(b"\xf2", fork="cancun")
         self.assertTrue(insn.mnemonic == "CALLCODE")
@@ -247,12 +254,6 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 1)
         self.assertTrue(insn.pushes == 1)
         self.assertTrue(insn.fee == 5)
-    
-    def test_EOF_fork(self):
-        # test new and updated opcodes
-        # test assemble
-        # test disassemble
-        ...
 
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")

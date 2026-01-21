@@ -4,7 +4,7 @@ from binascii import hexlify, unhexlify
 from typing import Iterator, Any
 import copy
 
-DEFAULT_FORK = "cancun"
+DEFAULT_FORK = "osaka"
 
 """
     Example use::
@@ -268,7 +268,7 @@ class Instruction(object):
         classes = {
             0: "Stop and Arithmetic Operations",
             1: "Comparison & Bitwise Logic Operations",
-            2: "SHA3",
+            2: "KECCAK256",
             3: "Environmental Information",
             4: "Block Information",
             5: "Stack, Memory, Storage and Flow Operations",
@@ -317,7 +317,7 @@ class Instruction(object):
     def reads_from_memory(self):
         """True if the instruction reads from memory"""
         return self.semantics in {
-            "SHA3",
+            "KECCAK256",
             "MCOPY",
             "MLOAD",
             "CREATE",
@@ -418,22 +418,6 @@ class Instruction(object):
             "SHR",
             "SAR",
         }
-
-
-# add type information
-
-
-class EthereumObjectFOrmat(object):
-
-    def __init__(self) -> None:
-        self.header = None
-        self.types = None
-        self.code: list[Instruction] = []
-        self.containers: dict = {}
-
-    def assemble(self, bytes): ...
-
-    def disassemble(self, bytes): ...
 
 
 def assemble_one(asmcode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> Instruction:
@@ -589,7 +573,7 @@ def disassemble_all(
 
 
 def disassemble(
-    bytecode: str | bytes | bytearray, pc: int = 0, fork: str = DEFAULT_FORK
+    bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK
 ) -> str:
     """Disassemble an EVM bytecode
 
@@ -808,7 +792,7 @@ frontier_instruction_dict = {
     0x18: ("XOR", 0, 2, 1, 3, "Bitwise XOR operation."),
     0x19: ("NOT", 0, 1, 1, 3, "Bitwise NOT operation."),
     0x1A: ("BYTE", 0, 2, 1, 3, "Retrieve single byte from word."),
-    0x20: ("SHA3", 0, 2, 1, 30, "Compute Keccak-256 hash."),
+    0x20: ("KECCAK256", 0, 2, 1, 30, "Compute Keccak-256 hash."),
     0x30: ("ADDRESS", 0, 0, 1, 2, "Get address of currently executing account."),
     0x31: ("BALANCE", 0, 1, 1, 20, "Get balance of the given account."),
     0x32: ("ORIGIN", 0, 0, 1, 2, "Get execution origination address."),
@@ -872,7 +856,7 @@ frontier_instruction_dict = {
     0x56: ("JUMP", 0, 1, 0, 8, "Alter the program counter."),
     0x57: ("JUMPI", 0, 2, 0, 10, "Conditionally alter the program counter."),
     0x58: (
-        "GETPC",
+        "PC",
         0,
         0,
         1,
@@ -1087,10 +1071,6 @@ constantinople_instruction_table = InstructionTable(
     constantinople_instruction_dict, previous_fork=byzantium_instruction_table
 )
 
-serenity_instruction_table = InstructionTable(
-    {}, previous_fork=constantinople_instruction_table
-)
-
 istanbul_instruction_dict = {
     0x31: ("BALANCE", 0, 1, 1, 700, "Get balance of the given account."),
     0x3F: ("EXTCODEHASH", 0, 1, 1, 700, "Get hash of code"),
@@ -1099,13 +1079,32 @@ istanbul_instruction_dict = {
     0x54: ("SLOAD", 0, 1, 1, 800, "Load word from storage."),
 }
 istanbul_instruction_table = InstructionTable(
-    istanbul_instruction_dict, previous_fork=serenity_instruction_table
+    istanbul_instruction_dict, previous_fork=constantinople_instruction_table
+)
+
+berlin_instruction_dict = {
+    0xF1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
+}
+
+berlin_instruction_table = InstructionTable(
+    berlin_instruction_dict, previous_fork=istanbul_instruction_table
 )
 
 london_instruction_dict = {0x48: ("BASEFEE", 0, 0, 1, 2, "Base fee in wei")}
 
 london_instruction_table = InstructionTable(
-    london_instruction_dict, previous_fork=istanbul_instruction_table
+    london_instruction_dict, previous_fork=berlin_instruction_table
+)
+
+paris_instruction_dict = {
+    0x3B: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
+    0x3C: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
+    0x3F: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
+    0x44: ("PREVRANDAO", 0, 0, 1, 2, "Get the block's difficulty."),
+}
+
+paris_instruction_table = InstructionTable(
+    paris_instruction_dict, previous_fork=london_instruction_table
 )
 
 shanghai_instruction_dict = {
@@ -1113,7 +1112,7 @@ shanghai_instruction_dict = {
 }
 
 shanghai_instruction_table = InstructionTable(
-    shanghai_instruction_dict, previous_fork=london_instruction_table
+    shanghai_instruction_dict, previous_fork=paris_instruction_table
 )
 
 cancun_instruction_dict = {
@@ -1129,23 +1128,9 @@ cancun_instruction_dict = {
     0x5C: ("TLOAD", 0, 1, 1, 100, "Load word from transient storage"),
     0x5D: ("TSTORE", 0, 2, 0, 100, "Save word to transient storage"),
     0x5E: ("MCOPY", 0, 3, 0, 3, "Copy memory areas"),
-    0x20: ("KECCAK256", 0, 2, 1, 30, "Compute Keccak-256 hash."),
     0x31: ("BALANCE", 0, 1, 1, 100, "Get balance of the given account."),
-    0x3B: ("EXTCODESIZE", 0, 1, 1, 100, "Get size of an account's code."),
-    0x3C: ("EXTCODECOPY", 0, 4, 0, 100, "Copy an account's code to memory."),
-    0x3F: ("EXTCODEHASH", 0, 1, 1, 100, "Get hash of code"),
-    0x44: ("PREVRANDAO", 0, 0, 1, 2, "Get the block's difficulty."),
     0x54: ("SLOAD", 0, 1, 1, 100, "Load word from storage."),
     0x55: ("SSTORE", 0, 2, 0, 100, "Save word to storage."),
-    0x58: (
-        "PC",
-        0,
-        0,
-        1,
-        2,
-        "Get the value of the program counter prior to the increment.",
-    ),
-    0xF1: ("CALL", 0, 7, 1, 100, "Message-call into an account."),
     0xF2: (
         "CALLCODE",
         0,
@@ -1177,9 +1162,11 @@ osaka_instruction_table = InstructionTable(
     osaka_instruction_dict, previous_fork=cancun_instruction_table
 )
 
-EOF_instruction_dict: dict = {}
+prague_instruction_dict: dict = {}
 
-EOF_instruction_table = InstructionTable({}, previous_fork=cancun_instruction_table)
+prague_instruction_table = InstructionTable(
+    prague_instruction_dict, previous_fork=cancun_instruction_table
+)
 
 
 accepted_forks: tuple[str, ...] = (
@@ -1192,11 +1179,13 @@ accepted_forks: tuple[str, ...] = (
     "petersburg",
     "serenity",
     "istanbul",
+    "berlin",
     "london",
+    "paris",
     "shanghai",
     "cancun",
+    "prague",
     "osaka",
-    "EOF",
 )
 
 
@@ -1208,13 +1197,14 @@ instruction_tables: dict[str, InstructionTable] = {
     "byzantium": byzantium_instruction_table,
     "constantinople": constantinople_instruction_table,
     "petersburg": constantinople_instruction_table,  # constantinople table is intentional here: those two are aliases
-    "serenity": serenity_instruction_table,
     "istanbul": istanbul_instruction_table,
+    "berlin": berlin_instruction_table,
     "london": london_instruction_table,
+    "paris": paris_instruction_table,
     "shanghai": shanghai_instruction_table,
     "cancun": cancun_instruction_table,
+    "prague": prague_instruction_table,
     "osaka": osaka_instruction_table,
-    "EOF": EOF_instruction_table,
 }
 
 
@@ -1248,12 +1238,13 @@ def block_to_fork(block_number: int):
         # 7280000: "constantinople", # Same Block as petersburg, commented to avoid conflicts
         7280000: "petersburg",
         9069000: "istanbul",
+        12244000: "berlin",
         12965000: "london",
+        15537394: "paris",
         17034870: "shanghai",
         19426587: "cancun",
-        22432084: "osaka",  # not accurate, no widely published osaka block
-        22431084: "EOF",  # not accurate also
-        15537393: "serenity",  # ethereum transition to proof of stake 15 September 2022
+        22431084: "prague",
+        23935694: "osaka",
     }
     fork_names = list(forks_by_block.values())
     fork_blocks = list(forks_by_block.keys())
