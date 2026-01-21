@@ -8,6 +8,13 @@ on:
   schedule:
     - cron: "0 12 * * *"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   pip-audit:
     runs-on: ubuntu-slim
