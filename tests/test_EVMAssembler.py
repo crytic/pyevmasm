@@ -123,12 +123,19 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.pops == 1)
         self.assertTrue(insn.pushes == 1)
 
+    def test_berlin_fork(self):
+        insn = EVMAsm.disassemble_one(b"\xf1", fork="berlin")
+        self.assertTrue(insn.mnemonic == "CALL")
+        self.assertTrue(insn.pops == 7)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+
     def test_london_fork(self):
         insn = EVMAsm.disassemble_one(b"\x48", fork="london")
         self.assertTrue(insn.mnemonic == "BASEFEE")
-        self.assertTrue(insn.fee == 2)
         self.assertTrue(insn.pops == 0)
         self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 2)
 
     def test_shanghai_fork(self):
         insn = EVMAsm.disassemble_one(b"\x5f", fork="shanghai")
@@ -159,11 +166,86 @@ class EVMTest_Assembler(unittest.TestCase):
         self.assertTrue(insn.fee == 100)
         self.assertTrue(insn.pops == 2)
         self.assertTrue(insn.pushes == 0)
-        insn = EVMAsm.disassemble_one(b"\x5e", fork="cancun")
-        self.assertTrue(insn.mnemonic == "MCOPY")
-        self.assertTrue(insn.fee == 3)
-        self.assertTrue(insn.pops == 3)
+
+        insn = EVMAsm.disassemble_one(b"\x20", fork="cancun")
+        self.assertTrue(insn.mnemonic == "KECCAK256")
+        self.assertTrue(insn.pops == 2)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 30)
+
+        insn = EVMAsm.disassemble_one(b"\x31", fork="cancun")
+        self.assertTrue(insn.mnemonic == "BALANCE")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+
+        insn = EVMAsm.disassemble_one(b"\x3b", fork="cancun")
+        self.assertTrue(insn.mnemonic == "EXTCODESIZE")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\x3c", fork="cancun")
+        self.assertTrue(insn.mnemonic == "EXTCODECOPY")
+        self.assertTrue(insn.pops == 4)
         self.assertTrue(insn.pushes == 0)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\x3f", fork="cancun")
+        self.assertTrue(insn.mnemonic == "EXTCODEHASH")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\x44", fork="cancun")
+        self.assertTrue(insn.mnemonic == "PREVRANDAO")
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 2)
+         
+        insn = EVMAsm.disassemble_one(b"\x54", fork="cancun")
+        self.assertTrue(insn.mnemonic == "SLOAD")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\x58", fork="cancun")
+        self.assertTrue(insn.mnemonic == "PC")
+        self.assertTrue(insn.pops == 0)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 2)
+         
+        insn = EVMAsm.disassemble_one(b"\xf1", fork="cancun")
+        self.assertTrue(insn.mnemonic == "CALL")
+        self.assertTrue(insn.pops == 7)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\xf2", fork="cancun")
+        self.assertTrue(insn.mnemonic == "CALLCODE")
+        self.assertTrue(insn.pops == 7)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\xf4", fork="cancun")
+        self.assertTrue(insn.mnemonic == "DELEGATECALL")
+        self.assertTrue(insn.pops == 6)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+        insn = EVMAsm.disassemble_one(b"\xfa", fork="cancun")
+        self.assertTrue(insn.mnemonic == "STATICCALL")
+        self.assertTrue(insn.pops == 6)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 100)
+         
+
+    def test_osaka_fork(self):
+        insn = EVMAsm.disassemble_one(b"\x1e", fork="osaka")
+        self.assertTrue(insn.mnemonic == "CLZ")
+        self.assertTrue(insn.pops == 1)
+        self.assertTrue(insn.pushes == 1)
+        self.assertTrue(insn.fee == 5)
 
     def test_assemble_DUP1_regression(self):
         insn = EVMAsm.assemble_one("DUP1")

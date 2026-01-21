@@ -10,7 +10,7 @@ pyevmasm is an assembler and disassembler library for the Ethereum Virtual Machi
 
 `evmasm` is a commandline utility that uses pyevmasm to assemble or disassemble EVM:
 
-```
+```sh
 usage: evmasm [-h] (-a | -d | -t) [-bi] [-bo] [-i [INPUT]] [-o [OUTPUT]] [-f FORK]
 
 pyevmasm the EVM assembler and disassembler
@@ -35,7 +35,7 @@ optional arguments:
 
 Disassembling the preamble of compiled contract:
 
-```
+```sh
 $ echo -n "608060405260043610603f57600035" | evmasm -d
 00000000: PUSH1 0x80
 00000002: PUSH1 0x40
@@ -51,7 +51,7 @@ $ echo -n "608060405260043610603f57600035" | evmasm -d
 
 ## Python API Examples
 
-```
+```sh
 >>> from pyevmasm import instruction_tables, disassemble_hex, disassemble_all, assemble_hex
 >>> instruction_table = instruction_tables['byzantium']
 >>> instruction_table[20]
@@ -78,15 +78,21 @@ MSTORE
 Python >=3.10 is required.
 
 Install the latest stable version using pip:
-```
+```sh
 pip install pyevmasm
 ```
 
 Or, install the library from source:
-```
+```sh
 git clone https://github.com/trailofbits/pyevmasm
 cd pyevmasm
 python setup.py install --user
+```
+
+to run the tests
+
+```sh
+python -m unittest tests\test_EVMAssembler.py -v
 ```
 
 ## Documentation
