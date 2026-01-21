@@ -1,7 +1,7 @@
 from bisect import bisect
 from binascii import hexlify, unhexlify
 
-from typing import Iterator, Any
+from typing import Iterator, Any, Optional, List, Tuple, Dict, Union
 import copy
 
 DEFAULT_FORK = "osaka"
@@ -58,7 +58,7 @@ class Instruction(object):
         pushes: int,
         fee: int,
         description: str,
-        operand: int | None = None,
+        operand: Optional[int] = None,
         pc: int = 0,
     ):
         """
@@ -484,8 +484,10 @@ def assemble_all(
 
 # make the bytecode typed iterable
 def disassemble_one(
-    bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK
-) -> Instruction | None:
+    bytecode: Union[str, bytes, bytearray, Iterator],
+    pc: int = 0,
+    fork: str = DEFAULT_FORK,
+) -> Union[Instruction, None]:
     """Disassemble a single instruction from a bytecode
 
     :param bytecode: the bytecode stream
@@ -530,7 +532,9 @@ def disassemble_one(
 
 # how to map yield and generator?
 def disassemble_all(
-    bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK
+    bytecode: Union[str, bytes, bytearray, Iterator],
+    pc: int = 0,
+    fork: str = DEFAULT_FORK,
 ) -> Iterator[Instruction]:
     """Disassemble all instructions in bytecode
 
@@ -573,7 +577,9 @@ def disassemble_all(
 
 
 def disassemble(
-    bytecode: str | bytes | bytearray | Iterator, pc: int = 0, fork: str = DEFAULT_FORK
+    bytecode: Union[str, bytes, bytearray, Iterator],
+    pc: int = 0,
+    fork: str = DEFAULT_FORK,
 ) -> str:
     """Disassemble an EVM bytecode
 
@@ -646,7 +652,7 @@ def disassemble_hex(bytecode: str, pc: int = 0, fork: str = DEFAULT_FORK) -> str
 
 
 def assemble_hex(
-    asmcode: str | list[Instruction], pc: int = 0, fork: str = DEFAULT_FORK
+    asmcode: Union[str, List[Instruction]], pc: int = 0, fork: str = DEFAULT_FORK
 ) -> str:
     """ Assemble an EVM program
 
@@ -1176,7 +1182,7 @@ osaka_instruction_table = InstructionTable(
 )
 
 
-accepted_forks: tuple[str, ...] = (
+accepted_forks: Tuple[str, ...] = (
     "frontier",
     "homestead",
     "tangerine_whistle",
@@ -1196,7 +1202,7 @@ accepted_forks: tuple[str, ...] = (
 )
 
 
-instruction_tables: dict[str, InstructionTable] = {
+instruction_tables: Dict[str, InstructionTable] = {
     "frontier": frontier_instruction_table,
     "homestead": homestead_instruction_table,
     "tangerine_whistle": tangerine_whistle_instruction_table,
