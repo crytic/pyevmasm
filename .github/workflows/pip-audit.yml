@@ -10,28 +10,24 @@ on:
 
 jobs:
   pip-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6
         with:
           persist-credentials: false
 
-      - name: Install Python
-        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v6.1.0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7
         with:
-          python-version: "3.x"
+          python-version: "3.10"
+          enable-cache: true
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7.2.0
-
-      - name: Install project
-        run: |
-          uv venv /tmp/pip-audit-env
-          VIRTUAL_ENV=/tmp/pip-audit-env uv pip install .
+      - name: Export dependencies
+        run: uv export --format requirements-txt --no-emit-project > requirements.txt
 
       - name: Run pip-audit
         uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266  # v1.1.0
         with:
-          virtual-environment: /tmp/pip-audit-env
+          inputs: requirements.txt
