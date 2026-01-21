@@ -2,45 +2,53 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.event_name == 'pull_request'
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-      with:
-        persist-credentials: false
-    - name: Set up Python 3.10
-      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v6.1.0
-      with:
-        python-version: "3.10"
-    - name: Lint
-      run: |
-        pip install black
-        pip install mypy
-        pip install -e .
-        black --version
-        black --check pyevmasm
-        mypy --version
-        mypy pyevmasm
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1  # v3.5.1
+        with:
+          args: check
+      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1  # v3.5.1
+        with:
+          args: format --check
+      - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7.2.0
+        with:
+          activate-environment: true
+      - name: Install lint dependencies
+        run: uv sync --group lint
+      - name: Type check
+        run: mypy pyevmasm
 
-  test310:
-    runs-on: ubuntu-latest
-
+  test:
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
-      with:
-        persist-credentials: false
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v6.1.0
-      with:
-        python-version: "3.10"
-    - name: Run Tests 3.10
-      run: |
-        pip install -e .
-        python -m unittest discover "tests/"
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: true
+      - name: Install dependencies
+        run: uv sync --group test
+      - name: Run tests
+        run: pytest
