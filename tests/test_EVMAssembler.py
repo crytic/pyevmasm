@@ -1,14 +1,10 @@
-import sys
 import unittest
 
 import pyevmasm as EVMAsm
 
 
 def int_to_bytes(i):
-    if sys.version_info[0] >= 3:
-        return i.to_bytes(1, "little")
-    else:
-        return bytes(chr(i))
+    return i.to_bytes(1, "little")
 
 
 # noinspection PyPep8Naming
