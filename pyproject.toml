@@ -37,9 +37,9 @@ Issues = "https://github.com/crytic/pyevmasm/issues"
 evmasm = "pyevmasm.__main__:main"
 
 [dependency-groups]
-dev = ["ruff>=0.14.0,<1.0", "pytest", "coverage", "mypy"]
 test = ["pytest", "coverage"]
 lint = ["ruff>=0.14.0,<1.0", "mypy"]
+dev = [{include-group = "test"}, {include-group = "lint"}]
 
 [tool.ruff]
 line-length = 100
